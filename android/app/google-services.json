@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "19900626399",
+    "project_id": "metrogestion",
+    "storage_bucket": "metrogestion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:19900626399:android:fb49fcc628e9a1d541406a",
+        "android_client_info": {
+          "package_name": "com.example.metro_gestion_proyecto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBM1uLGx9sc0z025pqDnidICmHo9HELJYY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
