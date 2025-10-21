@@ -5,8 +5,8 @@ import 'package:metro_gestion_proyecto/screens/login/login_screen.dart';
 
 void main() async {
 
-  WidgetsFlutterBinding.ensureInitialized(); 
-  
+  WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -26,6 +26,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // 3. MODIFICACIÓN: El punto de inicio de la app es el LoginScreen
-      home: const LoginScreen(), 
+      home: const LoginScreen(),
     );
   }
