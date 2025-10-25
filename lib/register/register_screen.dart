@@ -1,50 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:metro_gestion_proyecto/screens/home/home_screen.dart';
-import 'package:flutter/gestures.dart';
-import 'package:metro_gestion_proyecto/register/register_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
+  // ----- 1. Variables para controlar el formulario -----
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController(); // <-- Nuevo
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
 
-  void _handleLogin() async {
+  // ----- 2. Función para manejar el registro -----
+  void _handleRegister() async {
+    // Primero, valida que los campos no estén vacíos
     if (_formKey.currentState!.validate()) {
+      // Segundo, valida que las contraseñas coincidan
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Las contraseñas no coinciden.')),
+        );
+        return; // No continúes si no coinciden
+      }
+
+      // Si todo está bien, muestra el ícono de carga
       setState(() {
         _isLoading = true;
       });
 
+      // ----- 3. Lógica de Firebase para crear usuario -----
       try {
-        await _auth.signInWithEmailAndPassword(
+        await _auth.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        // Si sale bien, ¡Felicidades!
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '¡Cuenta creada con éxito! Ya puedes iniciar sesión.',
+            ),
+          ),
         );
+        // Regresa a la pantalla de login
+        Navigator.of(context).pop();
       } on FirebaseAuthException catch (e) {
-        String errorMessage =
-            'Error: Credenciales no válidas. Intente de nuevo.';
-        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-          errorMessage = 'Email o contraseña incorrectos.';
+        // Manejo de errores comunes
+        String errorMessage = 'Error al registrar. Intente de nuevo.';
+        if (e.code == 'weak-password') {
+          errorMessage =
+              'La contraseña es muy débil (debe tener al menos 6 caracteres).';
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = 'Este correo electrónico ya está en uso.';
         } else if (e.code == 'invalid-email') {
-          errorMessage = 'Formato de email inválido.';
+          errorMessage = 'El formato del correo no es válido.';
         }
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
       } finally {
+        // Oculta el ícono de carga
         setState(() {
           _isLoading = false;
         });
@@ -52,9 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // ----- 4. Diseño (UI) de la pantalla -----
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // --- AppBar para poder regresar ---
+      appBar: AppBar(
+        title: const Text('Crear Cuenta'),
+        backgroundColor: Colors.blue, // Color del tema
+        foregroundColor: Colors.white, // Color del texto
+        elevation: 0,
+      ),
+      // --- Cuerpo del formulario (muy similar al login) ---
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -66,23 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // LOGO CON LA RUTA CORRECTA
-                  Image.asset(
-                    'assets/imagen/Logo.png', // Ruta corregida
-                    height: 120,
-                    width: 120,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.directions_subway,
-                        size: 80,
-                        color: Colors.blue,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
+                  // --- Título ---
                   const Text(
-                    'METROGESTIÓN',
+                    'Completa tus datos',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 28,
@@ -92,14 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  const Text(
-                    'Inicie sesión para continuar',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Campo Email
+                  // --- Campo Email (Igual al login) ---
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -111,12 +123,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) => (value == null || value.isEmpty)
-                        ? 'Ingrese su correo electrónico'
+                        ? 'Ingrese su correo'
                         : null,
                   ),
                   const SizedBox(height: 20),
 
-                  // Campo Contraseña
+                  // --- Campo Contraseña (Igual al login) ---
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
@@ -128,27 +140,31 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (value) => (value == null || value.isEmpty)
-                        ? 'Ingrese su contraseña'
+                        ? 'Ingrese una contraseña'
                         : null,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
 
-                  // Olvidó contraseña
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        '¿Olvidó su contraseña?',
-                        style: TextStyle(color: Colors.grey),
+                  // --- NUEVO: Campo Confirmar Contraseña ---
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      prefixIcon: Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
                       ),
                     ),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Confirme su contraseña'
+                        : null,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // BOTÓN INICIAR SESIÓN
+                  // --- Botón de Registro (Igual al login) ---
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
+                    onPressed: _isLoading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
@@ -170,47 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               strokeWidth: 3,
                             ),
                           )
-                        : const Text('INICIAR SESIÓN'),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Registro
-                  // ---- REEMPLAZA EL TextButton CON ESTO: ----
-                  Text.rich(
-                    TextSpan(
-                      text: '¿Aún no tienes cuenta? ',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors
-                            .blueGrey, // <-- Usando el color que ya tenías
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Regístrate aquí',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors
-                                .orange, // <-- Naranja, para que combine con tu botón
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-
-                          // --- Esto es lo que hace el clic ---
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              // Navega a la pantalla de registro
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const RegisterScreen(),
-                                ),
-                              );
-                            },
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
+                        : const Text('REGISTRAR'), // <-- Texto del botón
                   ),
                 ],
               ),
