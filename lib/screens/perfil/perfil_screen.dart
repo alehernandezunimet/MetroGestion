@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:metro_gestion_proyecto/screens/proyectos/projects_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -110,19 +111,17 @@ class ProfileScreen extends StatelessWidget {
                       // 4. Botones de Acción (Orientados a Estudiante)
                       ElevatedButton.icon(
                         icon: const Icon(Icons.edit, color: Colors.white),
-                        label: const Text('Actualizar Contraseña'),
+                        label: const Text('Ver proyectos activos'),
                         onPressed: () {
-                          // TODO: Implementar lógica de cambio de contraseña
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Función de cambio de contraseña (próximamente)',
-                              ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ProjectsScreen(),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
@@ -132,7 +131,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 15),
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.settings),
+                        icon: const Icon(Icons.edit, color: Colors.white),
                         label: const Text('Configuración de Notificaciones'),
                         onPressed: () {
                           // TODO: Implementar lógica de configuración
