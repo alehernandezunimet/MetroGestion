@@ -34,7 +34,7 @@ class ProfileScreen extends StatelessWidget {
                 final data = snapshot.data!.data() as Map<String, dynamic>?;
 
                 final userEmail = user.email ?? 'No disponible';
-                final userRole = data?['rol'] ?? 'No definido';
+                final userRole = data?['rol'] ?? 'Estudiante';
                 final registrationDate = data?['fechaRegistro'] != null
                     ? (data!['fechaRegistro'] as Timestamp)
                           .toDate()
