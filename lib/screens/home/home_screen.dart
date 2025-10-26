@@ -34,7 +34,7 @@ class HomeScreen extends StatelessWidget {
             const Text(
               '¡Inicio de Sesión Exitoso! Bienvenido.',
               style: TextStyle(fontSize: 20),
-            ),  
+            ),
           ],
         ),
       ),

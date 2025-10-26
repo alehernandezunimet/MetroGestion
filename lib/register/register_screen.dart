@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -37,10 +37,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       // ----- 3. Lógica de Firebase para crear usuario -----
       try {
-        await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
+          UserCredential cred = await _auth.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+
         );
+        // Guardar datos adicionales (del rol) en Firestore
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(cred.user!.uid)
+            .set({
+          'email': _emailController.text.trim(),
+          'rol': _selectedRole,
+          'fechaRegistro': DateTime.now(), //dato que pudise llegar a ser util
+        });
 
         // Si sale bien, ¡Felicidades!
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,17 +74,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           errorMessage = 'El formato del correo no es válido.';
         }
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
       } finally {
-        // Oculta el ícono de carga
+        // siempre apagar el loading
         setState(() {
           _isLoading = false;
         });
-      }
     }
   }
+}
+
 
   // ----- 4. Diseño (UI) de la pantalla -----
   @override
