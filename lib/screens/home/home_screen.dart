@@ -27,12 +27,18 @@ class HomeScreen extends StatelessWidget {
           )
         ],
       ),
-      body: const Center(
-        child: Text(
-          '¡Inicio de Sesión Exitoso! Bienvenido.',
-          style: TextStyle(fontSize: 20),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              '¡Inicio de Sesión Exitoso! Bienvenido.',
+              style: TextStyle(fontSize: 20),
+            ),  
+          ],
         ),
       ),
+      
     );
   }
 }

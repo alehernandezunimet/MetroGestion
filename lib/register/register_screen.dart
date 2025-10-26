@@ -17,7 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       TextEditingController(); // <-- Nuevo
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
-
+  String? _selectedRole;
   // ----- 2. Función para manejar el registro -----
   void _handleRegister() async {
     // Primero, valida que los campos no estén vacíos
@@ -161,7 +161,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : null,
                   ),
                   const SizedBox(height: 32),
-
+                //boton para seleccionar rol
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedRole,
+                  decoration: const InputDecoration(
+                    labelText: 'Rol',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12.0)),
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'estudiante', child: Text('Estudiante')),
+                    DropdownMenuItem(value: 'profesor', child: Text('Profesor')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRole = value;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Seleccione un rol' : null,
+                ),
+                    const SizedBox(height: 32),
                   // --- Botón de Registro (Igual al login) ---
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
