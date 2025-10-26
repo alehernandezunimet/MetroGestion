@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:metro_gestion_proyecto/screens/login/login_screen.dart'; // Para navegar de vuelta
-
+import 'package:metro_gestion_proyecto/screens/perfil/perfil_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -34,6 +34,16 @@ class HomeScreen extends StatelessWidget {
             const Text(
               '¡Inicio de Sesión Exitoso! Bienvenido.',
               style: TextStyle(fontSize: 20),
+            ),
+            const SizedBox(height: 20), // Espacio entre texto y botón
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                );
+              },
+              child: const Text("Ver Perfil"),
             ),
           ],
         ),
