@@ -134,7 +134,6 @@ class ProfileScreen extends StatelessWidget {
                         icon: const Icon(Icons.edit, color: Colors.white),
                         label: const Text('Configuración de Notificaciones'),
                         onPressed: () {
-                          // TODO: Implementar lógica de configuración
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
