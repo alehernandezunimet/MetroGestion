@@ -52,6 +52,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _resetPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, ingrese su correo electrónico'),
+        ),
+      );
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,7 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: _isLoading ? null : _resetPassword,
                       child: const Text(
                         '¿Olvidó su contraseña?',
                         style: TextStyle(color: Colors.grey),
