@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:metro_gestion_proyecto/screens/login/login_screen.dart'; // Para navegar de vuelta
-import 'package:metro_gestion_proyecto/screens/perfil/perfil_screen.dart';
+import 'package:metro_gestion_proyecto/services/navigation_service.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -38,10 +38,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 20), // Espacio entre texto y botón
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                );
+                final uid = FirebaseAuth.instance.currentUser!.uid;
+                irAlPerfil(context, uid); // 👈 aquí decides a qué perfil ir
               },
               child: const Text("Ver Perfil"),
             ),
