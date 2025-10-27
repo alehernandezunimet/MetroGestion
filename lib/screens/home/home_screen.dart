@@ -20,6 +20,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de Control'),
+
         automaticallyImplyLeading: false,
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
@@ -44,8 +45,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
 
-            const Text(
-              '¡Inicio de Sesión Exitoso! Bienvenido.',
+            Text(
+               '¡Inicio de Sesión Exitoso!\nBienvenido ${user?.email ?? "Usuario"}',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 20),
             ),
             const SizedBox(height: 20),
