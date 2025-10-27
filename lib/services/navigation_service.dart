@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 //import 'package:firebase_auth/firebase_auth.dart';
-import 'package:metro_gestion_proyecto/screens/perfil/perfil_estudiante_screen.dart';
+import 'package:metro_gestion_proyecto/screens/perfil/perfil_screen.dart';
 import 'package:metro_gestion_proyecto/screens/perfil/perfil_profesor_screen.dart';
 
 Future<void> irAlPerfil(BuildContext context, String uid) async {
@@ -23,7 +23,7 @@ Future<void> irAlPerfil(BuildContext context, String uid) async {
     if (rol == 'estudiante') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const PerfilEstudianteScreen()),
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
     } else if (rol == 'profesor') {
       Navigator.push(
