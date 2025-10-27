@@ -62,7 +62,29 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Se ha enviado un correo para restablecer su contraseña'),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Error al enviar correo de restablecimiento.';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No existe un usuario con ese correo.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Formato de correo inválido.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
