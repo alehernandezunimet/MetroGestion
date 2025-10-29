@@ -10,20 +10,20 @@ class HomePageScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Fondo de pantalla - SOLUCIÓN 1
+          // Fondo de pantalla
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/imagen/fondo_homepage.png'), // Asegúrate de que la ruta sea correcta
+                image: AssetImage(
+                  'assets/imagen/fondo_homepage.png',
+                ), // Ruta de tu imagen
                 fit: BoxFit.cover,
               ),
             ),
           ),
 
-          // Capa semi-transparente para mejor legibilidad
-          Container(
-            color: Colors.black.withOpacity(0.3),
-          ),
+          // Capa semi-transparente
+          Container(color: Colors.black.withOpacity(0.3)),
 
           // Contenido principal
           Padding(
@@ -32,25 +32,15 @@ class HomePageScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 60),
 
-                // Botón de acceso en la esquina superior derecha - SOLUCIÓN 2
+                // Botón de acceso
                 Align(
                   alignment: Alignment.topRight,
                   child: ElevatedButton(
                     onPressed: () {
                       _showAccessMenu(context);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 4,
-                    ),
+                    // CAMBIO: Ya no necesita color, tomará el del tema.
+                    // style: ElevatedButton.styleFrom(backgroundColor: Colors.blue...),
                     child: const Text(
                       'ACCESO',
                       style: TextStyle(
@@ -61,14 +51,13 @@ class HomePageScreen extends StatelessWidget {
                   ),
                 ),
 
-                // SOLUCIÓN 2: Eliminamos los botones del medio y solo dejamos el título
-                Expanded(
+                // Título
+                const Expanded(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Logo o título de la aplicación
-                        const Text(
+                        Text(
                           'METROGESTIÓN',
                           style: TextStyle(
                             fontSize: 42,
@@ -77,8 +66,8 @@ class HomePageScreen extends StatelessWidget {
                             letterSpacing: 2,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
+                        SizedBox(height: 16),
+                        Text(
                           'Sistema de Gestión de Proyectos',
                           style: TextStyle(
                             fontSize: 18,
@@ -98,33 +87,25 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // Función para mostrar el menú de acceso
+  // --- Menú inferior que aparece al presionar "ACCESO" ---
   void _showAccessMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            runSpacing: 16,
+            children: <Widget>[
               const Text(
                 'Acceso al Sistema',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueGrey,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 24, width: double.infinity),
 
               // Botón para ir a Login
               SizedBox(
@@ -138,21 +119,11 @@ class HomePageScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.login, color: Colors.white),
-                  label: const Text(
-                    'Iniciar Sesión',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  icon: const Icon(Icons.login), // Color se toma del tema
+                  label: const Text('Iniciar Sesión'),
+                  // CAMBIO: Estilo se toma del tema
                 ),
               ),
-              const SizedBox(height: 12),
 
               // Botón para ir a Registro
               SizedBox(
@@ -171,28 +142,26 @@ class HomePageScreen extends StatelessWidget {
                     'Crear Cuenta',
                     style: TextStyle(color: Colors.white),
                   ),
+                  // CAMBIO: Diferenciamos este botón secundario
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    backgroundColor: Colors.blueGrey,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Botón para cerrar
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('Cancelar'),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

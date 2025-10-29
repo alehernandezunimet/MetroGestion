@@ -6,28 +6,37 @@ class ProjectsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Proyectos Activos'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.warning_amber, size: 80, color: Colors.orange),
-            SizedBox(height: 20),
-            Text(
-              '¡Aún no tienes proyectos!',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      // CAMBIO: AppBar eliminado, ahora está en home_screen.dart
+      // appBar: AppBar( ... ),
+
+      // CAMBIO: Centrado para consistencia
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: const Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.warning_amber,
+                  size: 80,
+                  color: Colors.orange,
+                ), // Esto ya estaba naranja
+                SizedBox(height: 20),
+                Text(
+                  '¡Aún no tienes proyectos!',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Esta es la pantalla donde aparecerán tus proyectos inscritos.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
             ),
-            SizedBox(height: 10),
-            Text(
-              'Esta es la pantalla donde aparecerán tus proyectos inscritos.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
+          ),
         ),
       ),
     );

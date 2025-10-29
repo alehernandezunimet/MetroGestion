@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void _handleLogin() async {
+    // ... (Tu lógica de login no cambia)
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -53,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _resetPassword() async {
+    // ... (Tu lógica de reset no cambia)
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-              'Se ha enviado un correo para restablecer su contraseña'),
+            'Se ha enviado un correo para restablecer su contraseña',
+          ),
         ),
       );
     } on FirebaseAuthException catch (e) {
@@ -78,17 +81,17 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'invalid-email') {
         errorMessage = 'Formato de correo inválido.';
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // CAMBIO: AppBar para dar sensación de página web
+      appBar: AppBar(title: const Text('Iniciar Sesión'), elevation: 0),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
@@ -100,101 +103,62 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  // LOGO CON LA RUTA CORRECTA
+                  // LOGO
                   Image.asset(
-                    'assets/imagen/Logo.png', // Ruta corregida
-                    height: 120,
-                    width: 120,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.directions_subway,
-                        size: 80,
-                        color: Colors.blue,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'METROGESTIÓN',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueGrey,
-                    ),
+                    'assets/imagen/Logo.png', // Ruta de tu logo
+                    height: 100,
                   ),
                   const SizedBox(height: 32),
 
-                  const Text(
-                    'Inicie sesión para continuar',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Campo Email
+                  // --- Campo de Email ---
                   TextFormField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                      ),
+                      labelText: 'Correo Electrónico',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(),
                     ),
-                    validator: (value) => (value == null || value.isEmpty)
-                        ? 'Ingrese su correo electrónico'
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) =>
+                        (value == null || !value.contains('@'))
+                        ? 'Ingrese un correo válido'
                         : null,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                  // Campo Contraseña
+                  // --- Campo de Contraseña ---
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
                     decoration: const InputDecoration(
                       labelText: 'Contraseña',
-                      prefixIcon: Icon(Icons.lock),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                      ),
+                      prefixIcon: Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(),
                     ),
+                    obscureText: true,
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Ingrese su contraseña'
                         : null,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                  // Olvidó contraseña
+                  // --- Olvidé mi contraseña ---
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _isLoading ? null : _resetPassword,
-                      child: const Text(
-                        '¿Olvidó su contraseña?',
-                        style: TextStyle(color: Colors.grey),
+                      onPressed: _resetPassword,
+                      child: Text(
+                        'Olvidé mi contraseña',
+                        // CAMBIO: Color naranja del tema
+                        style: TextStyle(color: Theme.of(context).primaryColor),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // BOTÓN INICIAR SESIÓN
+                  // --- Botón de Login ---
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    // CAMBIO: Estilo ya se toma del ThemeData
                     child: _isLoading
                         ? const SizedBox(
                             width: 24,
@@ -206,34 +170,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                         : const Text('INICIAR SESIÓN'),
                   ),
+                  const SizedBox(height: 24),
 
-                  const SizedBox(height: 20),
-
-                  // Registro
-                  // ---- REEMPLAZA EL TextButton CON ESTO: ----
-                  Text.rich(
-                    TextSpan(
-                      text: '¿Aún no tienes cuenta? ',
+                  // --- Enlace a Registro ---
+                  RichText(
+                    text: TextSpan(
+                      text: '¿No tienes una cuenta? ',
                       style: const TextStyle(
                         fontSize: 16,
-                        color: Colors
-                            .blueGrey, // <-- Usando el color que ya tenías
+                        color: Colors.black87,
                       ),
                       children: [
                         TextSpan(
                           text: 'Regístrate aquí',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors
-                                .orange, // <-- Naranja, para que combine con tu botón
+                            color: Theme.of(context).primaryColor, // CAMBIO
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,
                           ),
-
-                          // --- Esto es lo que hace el clic ---
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
-                              // Navega a la pantalla de registro
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
