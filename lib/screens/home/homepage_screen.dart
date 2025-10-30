@@ -136,14 +136,14 @@ class HomePageScreen extends StatelessWidget {
             children: [
               // Logo de la universidad
               Container(
-                width: 40,
-                height: 40,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.orange.withOpacity(0.5)),
                 ),
                 child: Image.asset(
-                  'assets/imagen/unimet.png', // Asegúrate de tener este archivo en tu carpeta assets
+                  'assets/imagen/unimet.png',
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
@@ -443,14 +443,14 @@ class HomePageScreen extends StatelessWidget {
         ),
         child: const Row(
           children: [
-            Icon(Icons.info_outline, size: 16, color: Colors.green),
+            Icon(Icons.info_outline, size: 16, color: Colors.orange),
             SizedBox(width: 6),
             Text(
               'Sobre Nosotros',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.green,
+                color: Colors.orange,
               ),
             ),
           ],
