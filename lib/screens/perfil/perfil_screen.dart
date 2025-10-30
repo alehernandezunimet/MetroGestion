@@ -10,10 +10,7 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      // CAMBIO: Quitamos el AppBar. Ahora está en home_screen.dart
-      // appBar: AppBar( ... ),
 
-      // CAMBIO: Usamos un LayoutBuilder para centrar el contenido en web
       body: LayoutBuilder(
         builder: (context, constraints) {
           return Center(

@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   void _handleLogin() async {
-    // ... (Tu lógica de login no cambia)
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -54,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _resetPassword() async {
-    // ... (Tu lógica de reset no cambia)
+
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -90,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // CAMBIO: AppBar para dar sensación de página web
+
       appBar: AppBar(title: const Text('Iniciar Sesión'), elevation: 0),
       body: Center(
         child: SingleChildScrollView(
@@ -110,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // --- Campo de Email ---
+
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -126,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // --- Campo de Contraseña ---
+
                   TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(
@@ -141,24 +140,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // --- Olvidé mi contraseña ---
+
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _resetPassword,
                       child: Text(
                         'Olvidé mi contraseña',
-                        // CAMBIO: Color naranja del tema
+
                         style: TextStyle(color: Theme.of(context).primaryColor),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
-                  // --- Botón de Login ---
+
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
-                    // CAMBIO: Estilo ya se toma del ThemeData
+
                     child: _isLoading
                         ? const SizedBox(
                             width: 24,
@@ -172,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- Enlace a Registro ---
+
                   RichText(
                     text: TextSpan(
                       text: '¿No tienes una cuenta? ',
@@ -185,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           text: 'Regístrate aquí',
                           style: TextStyle(
                             fontSize: 16,
-                            color: Theme.of(context).primaryColor, // CAMBIO
+                            color: Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,
                           ),

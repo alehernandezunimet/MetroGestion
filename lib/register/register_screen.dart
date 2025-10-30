@@ -10,7 +10,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // ... (Toda tu lógica de variables y _handleRegister no cambia)
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // CAMBIO: AppBar para dar sensación de página web
+
       appBar: AppBar(title: const Text('Crear Cuenta'), elevation: 0),
       body: Center(
         child: SingleChildScrollView(
@@ -102,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // ... (Campos de Email, Contraseña, Confirmar Contraseña) ...
+
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -144,7 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- Selector de Rol ---
+
                   DropdownButtonFormField<String>(
                     value: _selectedRole,
                     decoration: const InputDecoration(
@@ -172,10 +172,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // --- Botón de Registro ---
+
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
-                    // CAMBIO: Estilo tomado del ThemeData (naranja)
+
                     child: _isLoading
                         ? const SizedBox(
                             width: 24,

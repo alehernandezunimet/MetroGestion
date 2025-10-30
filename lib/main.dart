@@ -17,16 +17,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'METROGESTIÓN',
-      debugShowCheckedModeBanner: false, // CAMBIO: Oculta la cinta de "debug"
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // CAMBIO: Tema principal Naranja
+
         primarySwatch: Colors.orange,
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: Colors.orange,
         ).copyWith(secondary: Colors.orangeAccent),
         useMaterial3: true,
 
-        // CAMBIO: Estilo de AppBar para toda la app
+
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.orange,
           foregroundColor: Colors.white,
@@ -38,11 +38,11 @@ class MyApp extends StatelessWidget {
           ),
         ),
 
-        // CAMBIO: Estilo de botones para toda la app
+
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange, // Botón naranja
-            foregroundColor: Colors.white, // Texto blanco
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),

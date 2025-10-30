@@ -66,9 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // CAMBIO: El título cambia según la selección
+
         title: Text(pageTitles[_selectedIndex]),
-        automaticallyImplyLeading: false, // Oculta la flecha "atrás"
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -79,14 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _isLoading
           ? Center(
-              // CAMBIO: Indicador de carga naranja
+
               child: CircularProgressIndicator(
                 color: Theme.of(context).primaryColor,
               ),
             )
           : Row(
               children: [
-                // --- CAMBIO: Menú Lateral (Estilo Web) ---
+
                 NavigationRail(
                   selectedIndex: _selectedIndex,
                   onDestinationSelected: (int index) {
