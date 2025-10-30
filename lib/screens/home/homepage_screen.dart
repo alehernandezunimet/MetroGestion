@@ -26,7 +26,7 @@ class HomePageScreen extends StatelessWidget {
 
           Column(
             children: [
-              // Barra de navegación superior CON NUEVAS OPCIONES
+              // Barra de navegación superior MODIFICADA
               _buildNavBar(context),
 
               Expanded(
@@ -113,7 +113,7 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // Barra de navegación superior CON NUEVAS OPCIONES
+  // Barra de navegación superior MODIFICADA
   Widget _buildNavBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -131,24 +131,55 @@ class HomePageScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          //  nombre
+          // Logo de la universidad y nombre
           Row(
             children: [
-
+              // Logo de la universidad
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                ),
+                child: Image.asset(
+                  'assets/imagen/unimet.png', // Asegúrate de tener este archivo en tu carpeta assets
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'UNIMET',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
               const SizedBox(width: 12),
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'LABORATORIOS UNIMET',
+                    'UNIVERSIDAD METROPOLITANA',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.orange,
                     ),
                   ),
                   Text(
-                    'Sistema de Gestión',
+                    'Laboratorios de Ingeniería',
                     style: TextStyle(
                       fontSize: 10,
                       color: Colors.grey,
@@ -159,21 +190,11 @@ class HomePageScreen extends StatelessWidget {
             ],
           ),
 
-          // Menús de navegación MEJORADOS
+          // Menús de navegación SIMPLIFICADOS (sin Consultorías ni Laboratorios)
           Row(
             children: [
-              // Menú Consultorías
-              _buildConsultoriasMenu(context),
-
-              const SizedBox(width: 15),
-
               // Menú Proyectos
               _buildProjectsMenu(context),
-
-              const SizedBox(width: 15),
-
-              // Menú Laboratorios
-              _buildLaboratoriosMenu(context),
 
               const SizedBox(width: 15),
 
@@ -182,12 +203,17 @@ class HomePageScreen extends StatelessWidget {
 
               const SizedBox(width: 15),
 
-              // NUEVO: Sobre Nosotros (sin menú desplegable)
+              // Menú Roles
+              _buildRolesMenu(context),
+
+              const SizedBox(width: 15),
+
+              // Sobre Nosotros (sin menú desplegable)
               _buildAboutUsButton(context),
 
               const SizedBox(width: 15),
 
-              // NUEVO: Soporte (con menú desplegable)
+              // Soporte (con menú desplegable)
               _buildSupportMenu(context),
             ],
           ),
@@ -197,86 +223,6 @@ class HomePageScreen extends StatelessWidget {
   }
 
   // ========== MÉTODOS PARA LOS MENÚS ==========
-
-  // Menú desplegable de Consultorías
-  Widget _buildConsultoriasMenu(BuildContext context) {
-    return PopupMenuButton<String>(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      offset: const Offset(0, 45),
-      itemBuilder: (BuildContext context) => [
-        const PopupMenuItem<String>(
-          value: 'calidad_ambiental',
-          child: Row(
-            children: [
-              Icon(Icons.water_drop, color: Colors.green, size: 20),
-              SizedBox(width: 8),
-              Text('Calidad Ambiental'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'aguas',
-          child: Row(
-            children: [
-              Icon(Icons.waves, color: Colors.blue, size: 20),
-              SizedBox(width: 8),
-              Text('Análisis de Aguas'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'residuos',
-          child: Row(
-            children: [
-              Icon(Icons.delete, color: Colors.brown, size: 20),
-              SizedBox(width: 8),
-              Text('Gestión de Residuos'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'lubricantes',
-          child: Row(
-            children: [
-              Icon(Icons.oil_barrel, color: Colors.orange, size: 20),
-              SizedBox(width: 8),
-              Text('Lubricantes'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'combustibles',
-          child: Row(
-            children: [
-              Icon(Icons.local_gas_station, color: Colors.red, size: 20),
-              SizedBox(width: 8),
-              Text('Combustibles'),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: 'info_consultorias',
-          enabled: false,
-          child: Text(
-            'Áreas de consultoría especializada',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ),
-      ],
-      onSelected: (String value) {
-        _handleConsultoriasMenuSelection(value, context);
-      },
-      child: _buildNavItem('Consultorías', Icons.business_center),
-    );
-  }
 
   // Menú desplegable de Proyectos
   Widget _buildProjectsMenu(BuildContext context) {
@@ -355,63 +301,6 @@ class HomePageScreen extends StatelessWidget {
         _handleProjectsMenuSelection(value, context);
       },
       child: _buildNavItem('Proyectos', Icons.work_outline),
-    );
-  }
-
-  // Menú desplegable de Laboratorios
-  Widget _buildLaboratoriosMenu(BuildContext context) {
-    return PopupMenuButton<String>(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      offset: const Offset(0, 45),
-      itemBuilder: (BuildContext context) => [
-        const PopupMenuItem<String>(
-          value: 'lab_ambiental',
-          child: Row(
-            children: [
-              Icon(Icons.eco, color: Colors.green, size: 20),
-              SizedBox(width: 8),
-              Text('Lab. Ambiental'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'lab_materiales',
-          child: Row(
-            children: [
-              Icon(Icons.construction, color: Colors.blue, size: 20),
-              SizedBox(width: 8),
-              Text('Lab. Materiales'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'lab_combustibles',
-          child: Row(
-            children: [
-              Icon(Icons.science, color: Colors.orange, size: 20),
-              SizedBox(width: 8),
-              Text('Lab. Combustibles'),
-            ],
-          ),
-        ),
-        const PopupMenuItem<String>(
-          value: 'servicios_construccion',
-          child: Row(
-            children: [
-              Icon(Icons.architecture, color: Colors.purple, size: 20),
-              SizedBox(width: 8),
-              Text('Servicios Construcción'),
-            ],
-          ),
-        ),
-      ],
-      onSelected: (String value) {
-        _handleLaboratoriosMenuSelection(value, context);
-      },
-      child: _buildNavItem('Laboratorios', Icons.science),
     );
   }
 
@@ -539,7 +428,7 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // NUEVO: Botón "Sobre Nosotros" (sin menú desplegable)
+  // Botón "Sobre Nosotros" (sin menú desplegable)
   Widget _buildAboutUsButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -570,7 +459,7 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // NUEVO: Menú desplegable de Soporte
+  // Menú desplegable de Soporte
   Widget _buildSupportMenu(BuildContext context) {
     return PopupMenuButton<String>(
       color: Colors.white,
@@ -678,7 +567,7 @@ class HomePageScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -689,7 +578,7 @@ class HomePageScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.blue,
+              color: Colors.orange,
             ),
           ),
           const SizedBox(width: 4),
@@ -700,27 +589,6 @@ class HomePageScreen extends StatelessWidget {
   }
 
   // ========== MANEJADORES DE SELECCIÓN ==========
-
-  // Manejar selección del menú Consultorías
-  void _handleConsultoriasMenuSelection(String value, BuildContext context) {
-    switch (value) {
-      case 'calidad_ambiental':
-        _showMessage(context, 'Calidad Ambiental', 'Consultoría en calidad ambiental');
-        break;
-      case 'aguas':
-        _showMessage(context, 'Análisis de Aguas', 'Servicios de análisis de aguas');
-        break;
-      case 'residuos':
-        _showMessage(context, 'Gestión de Residuos', 'Consultoría en manejo de residuos');
-        break;
-      case 'lubricantes':
-        _showMessage(context, 'Lubricantes', 'Análisis de lubricantes');
-        break;
-      case 'combustibles':
-        _showMessage(context, 'Combustibles', 'Control de calidad de combustibles');
-        break;
-    }
-  }
 
   // Manejar selección del menú Proyectos
   void _handleProjectsMenuSelection(String value, BuildContext context) {
@@ -739,24 +607,6 @@ class HomePageScreen extends StatelessWidget {
         break;
       case 'suspendidos':
         _showMessage(context, 'Proyectos Suspendidos', 'Proyectos en pausa');
-        break;
-    }
-  }
-
-  // Manejar selección del menú Laboratorios
-  void _handleLaboratoriosMenuSelection(String value, BuildContext context) {
-    switch (value) {
-      case 'lab_ambiental':
-        _showMessage(context, 'Laboratorio Ambiental', 'Especializado en calidad ambiental');
-        break;
-      case 'lab_materiales':
-        _showMessage(context, 'Laboratorio de Materiales', 'Análisis de materiales de construcción');
-        break;
-      case 'lab_combustibles':
-        _showMessage(context, 'Laboratorio de Combustibles', 'Control de calidad de combustibles y lubricantes');
-        break;
-      case 'servicios_construccion':
-        _showMessage(context, 'Servicios de Construcción', 'Diseño, construcción e inspección de obras');
         break;
     }
   }
@@ -826,7 +676,7 @@ class HomePageScreen extends StatelessWidget {
 
   // ========== DIÁLOGOS Y MÉTODOS AUXILIARES ==========
 
-  // NUEVO: Diálogo "Sobre Nosotros"
+  // Diálogo "Sobre Nosotros"
   void _showAboutUsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -834,7 +684,7 @@ class HomePageScreen extends StatelessWidget {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.school, color: Colors.blue),
+              Icon(Icons.school, color: Colors.orange),
               SizedBox(width: 10),
               Text('Sobre Nosotros'),
             ],
@@ -927,7 +777,7 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // NUEVO: Diálogo de Contacto
+  // Diálogo de Contacto
   void _showContactDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -972,7 +822,7 @@ class HomePageScreen extends StatelessWidget {
     );
   }
 
-  // NUEVO: Diálogo para Reportar Problema
+  // Diálogo para Reportar Problema
   void _showReportProblemDialog(BuildContext context) {
     showDialog(
       context: context,
