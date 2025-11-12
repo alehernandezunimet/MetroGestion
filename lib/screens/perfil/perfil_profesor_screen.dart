@@ -58,11 +58,11 @@ class _PerfilProfesorScreenState extends State<PerfilProfesorScreen> {
           });
 
           if (_emailController.text != user.email) {
-            await user.updateEmail(_emailController.text);
+            await user.verifyBeforeUpdateEmail(_emailController.text);
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Perfil actualizado correctamente')),
+            const SnackBar(content: Text('¡Correo enviado! Revisa tu nuevo email para verificar el cambio.')),
           );
 
           setState(() {

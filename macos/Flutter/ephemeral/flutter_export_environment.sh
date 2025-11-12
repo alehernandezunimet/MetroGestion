@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=C:\dev\flutter_windows_3.35.5-stable\flutter"
-export "FLUTTER_APPLICATION_PATH=C:\Users\gabri\OneDrive\Documents\GitHub\MetroGestion\MetroGestion"
+export "FLUTTER_ROOT=C:\dev\flutter_windows_3.35.4-stable\flutter"
+export "FLUTTER_APPLICATION_PATH=C:\Metro_Gestion\metro_gestion_proyecto"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.0.0"

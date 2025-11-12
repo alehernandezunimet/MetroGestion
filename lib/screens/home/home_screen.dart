@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onProfileUpdated: _fetchUserData,
         );
       case 2:
-        return const ProjectsScreen();
+        return ProjectsScreen(userRole: _userRole);
       default:
         return _buildHomePage();
     }
