@@ -2,284 +2,222 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class PerfilProfesorScreen extends StatelessWidget {
-  const PerfilProfesorScreen({super.key});
+class PerfilProfesorScreen extends StatefulWidget {
+  final String? userEmail;
+  final String? userRole;
+  final String? userName;
+  final VoidCallback? onProfileUpdated;
+
+  const PerfilProfesorScreen({
+    super.key,
+    this.userEmail,
+    this.userRole,
+    this.userName,
+    this.onProfileUpdated,
+  });
+
+  @override
+  State<PerfilProfesorScreen> createState() => _PerfilProfesorScreenState();
+}
+
+class _PerfilProfesorScreenState extends State<PerfilProfesorScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  bool _isEditing = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.userName);
+    _emailController = TextEditingController(text: widget.userEmail);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateProfile() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('usuarios')
+              .doc(user.uid)
+              .update({
+            'nombre': _nameController.text,
+          });
+
+          if (_emailController.text != user.email) {
+            await user.updateEmail(_emailController.text);
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Perfil actualizado correctamente')),
+          );
+
+          setState(() {
+            _isEditing = false;
+          });
+
+          widget.onProfileUpdated?.call();
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al actualizar: $e')),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    return Scaffold(
-      // CAMBIO: AppBar eliminado, ahora está en home_screen.dart
-      // appBar: AppBar( ... ),
-
-      // CAMBIO: Usamos un LayoutBuilder para centrar el contenido
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800), // Ancho máximo
-              child: user == null
-                  ? const Center(child: Text("No hay usuario autenticado"))
-                  : StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('usuarios')
-                          .doc(user.uid)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          // CAMBIO: Indicador naranja
-                          return Center(
-                            child: CircularProgressIndicator(
-                              color: Theme.of(context).primaryColor,
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          return const Center(
-                            child: Text("Error al cargar el perfil"),
-                          );
-                        }
-
-                        final data =
-                            snapshot.data!.data() as Map<String, dynamic>?;
-
-                        final userEmail = user.email ?? 'No disponible';
-                        final registrationDate = data?['fechaRegistro'] != null
-                            ? (data!['fechaRegistro'] as Timestamp)
-                                  .toDate()
-                                  .toString()
-                                  .substring(0, 10)
-                            : '---';
-
-                        return SingleChildScrollView(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              // 1. Icono de Profesor
-                              Center(
-                                child: CircleAvatar(
-                                  radius: 60,
-                                  // CAMBIO: Color naranja
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
-                                  child: const Icon(
-                                    Icons.school,
-                                    size: 70,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // 2. Título de Bienvenida
-                              Text(
-                                'Bienvenido, Profesor',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  // CAMBIO: Color naranja oscuro
-                                  color: Colors.orange[800],
-                                ),
-                              ),
-                              Text(
-                                userEmail,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-
-                              // 3. Información
-                              Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      _buildInfoRow(
-                                        context,
-                                        Icons.email,
-                                        "Correo Institucional",
-                                        userEmail,
-                                      ),
-                                      const Divider(height: 20),
-                                      _buildInfoRow(
-                                        context,
-                                        Icons.badge,
-                                        "Rol",
-                                        "PROFESOR",
-                                      ),
-                                      const Divider(height: 20),
-                                      _buildInfoRow(
-                                        context,
-                                        Icons.calendar_today,
-                                        "Miembro Desde",
-                                        registrationDate,
-                                      ),
-                                      const Divider(height: 20),
-                                      _buildInfoRow(
-                                        context,
-                                        Icons.assignment,
-                                        "Proyectos Creados",
-                                        "0",
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 40),
-
-                              // 4. Herramientas
-                              Text(
-                                'Herramientas del Profesor',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange[800], // CAMBIO
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.assignment_add),
-                                label: const Text('Crear Nuevo Proyecto'),
-                                onPressed: () => _createProject(context),
-                                // CAMBIO: Estilo ya tomado del ThemeData
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.people),
-                                label: const Text('Gestionar Estudiantes'),
-                                onPressed: () => _manageStudents(context),
-                                // CAMBIO: Estilo naranja
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
-                                  side: BorderSide(
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                icon: const Icon(Icons.bar_chart),
-                                label: const Text('Ver Estadísticas'),
-                                onPressed: () => _showStatistics(context),
-                                // CAMBIO: Estilo naranja
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Theme.of(
-                                    context,
-                                  ).primaryColor,
-                                  side: BorderSide(
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Mi Perfil - Profesor',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              IconButton(
+                icon: Icon(_isEditing ? Icons.cancel : Icons.edit),
+                onPressed: () {
+                  setState(() {
+                    _isEditing = !_isEditing;
+                    if (!_isEditing) {
+                      _nameController.text = widget.userName ?? '';
+                      _emailController.text = widget.userEmail ?? '';
+                    }
+                  });
+                },
+                tooltip: _isEditing ? 'Cancelar' : 'Editar',
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    _buildInfoField(
+                      label: 'Nombre',
+                      controller: _nameController,
+                      isEditable: _isEditing,
                     ),
+                    const SizedBox(height: 16),
+                    _buildInfoField(
+                      label: 'Correo electrónico',
+                      controller: _emailController,
+                      isEditable: _isEditing,
+                      isEmail: true,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoRow(
+                      'Rol',
+                      'Profesor/a',
+                    ),
+                    const SizedBox(height: 20),
+                    if (_isEditing)
+                      _isLoading
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton(
+                        onPressed: _updateProfile,
+                        child: const Text('Guardar Cambios'),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  // Widget auxiliar para las filas de información
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String value,
-  ) {
-    return Row(
+  Widget _buildInfoField({
+    required String label,
+    required TextEditingController controller,
+    required bool isEditable,
+    bool isEmail = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // CAMBIO: Icono naranja
-        Icon(icon, color: Theme.of(context).primaryColor, size: 24),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
-              ),
-            ],
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        isEditable
+            ? TextFormField(
+          controller: controller,
+          enabled: isEditable,
+          keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
           ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Este campo es requerido';
+            }
+            if (isEmail && !value.contains('@')) {
+              return 'Ingrese un email válido';
+            }
+            return null;
+          },
+        )
+            : Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(controller.text),
         ),
       ],
     );
   }
 
-  // --- Lógica de botones (sin cambios) ---
-  void _createProject(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Crear Nuevo Proyecto'),
-          content: const Text(
-            '¿Deseas crear un nuevo proyecto de investigación?',
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Función de creación de proyectos (próximamente)',
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Crear'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _manageStudents(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Panel de gestión de estudiantes (próximamente)'),
-      ),
-    );
-  }
-
-  void _showStatistics(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Estadísticas y reportes (próximamente)')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: Text(value)),
+      ],
     );
   }
 }

@@ -10,12 +10,13 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _apellidoController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   String? _selectedRole;
@@ -37,14 +38,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+        // Combinar nombre y apellido en un solo campo
+        String nombreCompleto = '${_nombreController.text.trim()} ${_apellidoController.text.trim()}';
+
         await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(cred.user!.uid)
             .set({
-              'email': _emailController.text.trim(),
-              'rol': _selectedRole,
-              'fechaRegistro': DateTime.now(),
-            });
+          'email': _emailController.text.trim(),
+          'nombre': nombreCompleto,
+          'rol': _selectedRole,
+          'fechaRegistro': DateTime.now(),
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -58,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         String errorMessage = 'Error al registrar. Intente de nuevo.';
         if (e.code == 'weak-password') {
           errorMessage =
-              'La contraseña es muy débil (debe tener al menos 6 caracteres).';
+          'La contraseña es muy débil (debe tener al menos 6 caracteres).';
         } else if (e.code == 'email-already-in-use') {
           errorMessage = 'Este correo electrónico ya está en uso.';
         } else if (e.code == 'invalid-email') {
@@ -78,7 +84,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       appBar: AppBar(title: const Text('Crear Cuenta'), elevation: 0),
       body: Center(
         child: SingleChildScrollView(
@@ -97,12 +102,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor, // CAMBIO
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                   const SizedBox(height: 32),
 
+                  // Campo para Nombre
+                  TextFormField(
+                    controller: _nombreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                      hintText: 'Ingrese su nombre',
+                    ),
+                    keyboardType: TextInputType.name,
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) =>
+                    (value == null || value.isEmpty)
+                        ? 'Ingrese su nombre'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
 
+                  // Campo para Apellido
+                  TextFormField(
+                    controller: _apellidoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Apellido',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                      hintText: 'Ingrese su apellido',
+                    ),
+                    keyboardType: TextInputType.name,
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) =>
+                    (value == null || value.isEmpty)
+                        ? 'Ingrese su apellido'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo para Email
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -112,11 +153,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) =>
-                        (value == null || !value.contains('@'))
+                    (value == null || !value.contains('@'))
                         ? 'Ingrese un correo válido'
                         : null,
                   ),
                   const SizedBox(height: 16),
+
+                  // Campo para Contraseña
                   TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(
@@ -130,6 +173,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : null,
                   ),
                   const SizedBox(height: 16),
+
+                  // Campo para Confirmar Contraseña
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: const InputDecoration(
@@ -144,7 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-
+                  // Selector de Rol
                   DropdownButtonFormField<String>(
                     value: _selectedRole,
                     decoration: const InputDecoration(
@@ -168,23 +213,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       });
                     },
                     validator: (value) =>
-                        value == null ? 'Seleccione un rol' : null,
+                    value == null ? 'Seleccione un rol' : null,
                   ),
                   const SizedBox(height: 32),
 
-
+                  // Botón de Registro
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleRegister,
-
                     child: _isLoading
                         ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
+                      ),
+                    )
                         : const Text('REGISTRAR'),
                   ),
                 ],
