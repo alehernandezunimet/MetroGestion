@@ -18,15 +18,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Ya no necesitamos _expandedProjectId si usamos ExpansionTile directamente
-
   Stream<QuerySnapshot> _getProjectsStream() {
     final User? user = _auth.currentUser;
     if (user == null) {
       return const Stream.empty();
     }
 
-    // Si es profesor, muestra los proyectos que lidera.
     if (widget.userRole == 'profesor') {
       return _firestore
           .collection('proyectos')
@@ -34,7 +31,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           .where('estado', isEqualTo: 'activo')
           .snapshots();
     } else {
-      // Si es estudiante, muestra los proyectos en los que es miembro.
       return _firestore
           .collection('proyectos')
           .where('miembros', arrayContains: user.uid)
@@ -43,7 +39,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  // --- NUEVA FUNCIÓN PARA LISTAR TAREAS DENTRO DEL DESPLEGABLE ---
   Widget _buildTasksList(String projectId) {
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
@@ -94,7 +89,6 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ).format(fechaLimiteTimestamp.toDate())
                   : 'Sin Fecha Límite';
 
-              // Mostrar título, descripción y fecha límite
               return ListTile(
                 dense: true,
                 leading: Icon(Icons.assignment, color: Colors.orange[700]),
@@ -119,10 +113,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Límite: $fechaLimite',
+                      'Fecha de entrega: $fechaLimite',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.red[700],
+                        color: Colors.grey[700],
                         fontWeight: FontWeight.bold,
                       ),
                     ),
