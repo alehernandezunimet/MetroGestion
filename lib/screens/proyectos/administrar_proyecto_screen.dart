@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'tareas_screen.dart';
 
 class AdministrarProyectoScreen extends StatefulWidget {
   final String projectId;
@@ -546,9 +547,19 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: null,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TasksScreen(
+                            projectId: widget.projectId,
+                            projectName: widget.projectData['nombre'],
+                          ),
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.add_task),
-                    label: const Text('Agregar Tarea (Próximamente)'),
+                    label: const Text('Gestionar tareas'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey,
                     ),
