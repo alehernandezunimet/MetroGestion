@@ -113,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(color: Colors.red),
             ),
             onTap: () async {
-              Navigator.of(context).pop(); // Cierra el Drawer
+              Navigator.of(context).pop();
               await FirebaseAuth.instance.signOut();
               _redirectToLogin();
             },
@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     switch (_selectedIndex) {
       case 0:
-        return _buildDashboardBody(); // Contiene el saludo "Buenos días..."
+        return _buildDashboardBody();
       case 1:
         return ProjectsScreen(userRole: _userRole);
       case 2:
@@ -185,38 +185,40 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isProfessor = _userRole == 'profesor';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Saludo
           Text(
             '${_getSaludo()}, ${_userName?.split(' ')[0] ?? 'Usuario'}',
             style: TextStyle(
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).primaryColor,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             isProfessor
                 ? 'Bienvenido/a a la gestión de proyectos.'
                 : 'Revisa tus proyectos y tareas asignadas.',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
 
           const Text(
             'Acciones Rápidas',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ), // Reducido de 18 a 16
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           GridView.count(
             crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
@@ -303,34 +305,34 @@ class HomeGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: Colors.orange[100]!, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 32, color: iconColor),
-              const SizedBox(height: 8),
+              Icon(icon, size: 24, color: iconColor),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ],
           ),
