@@ -560,9 +560,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                     },
                     icon: const Icon(Icons.add_task),
                     label: const Text('Gestionar tareas'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                    ),
                   ),
                 ),
               ],
