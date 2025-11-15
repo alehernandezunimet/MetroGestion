@@ -77,16 +77,22 @@ class _TasksScreenState extends State<TasksScreen> {
         SnackBar(
           content: Text(
             isCompleted
-                ? 'Tarea marcada como completada. 🎉'
-                : 'Tarea marcada como pendiente. ⏳',
+                ? 'Tarea marcada como completada.'
+                : 'Tarea marcada como pendiente.',
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al actualizar tarea: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error al actualizar tarea: ${e.toString()}. (Posible error)',
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
     }
   }
 
