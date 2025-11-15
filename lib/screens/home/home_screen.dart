@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUserData();
   }
 
+  // --- WIDGET: Construye el menú lateral (Drawer) ---
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -123,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Helper para construir los ítems del Drawer
   Widget _buildDrawerItem(int index, IconData icon, String title) {
     return ListTile(
       leading: Icon(
@@ -150,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- Widgets de navegación para el body ---
   Widget _getBodyWidget() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -181,88 +184,168 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- DASHBOARD BODY (NUEVO DISEÑO) ---
   Widget _buildDashboardBody() {
     final bool isProfessor = _userRole == 'profesor';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${_getSaludo()}, ${_userName?.split(' ')[0] ?? 'Usuario'}',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
+          // 1. BANNER DE BIENVENIDA
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.9),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getSaludo(),
+                  style: const TextStyle(fontSize: 18, color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _userName?.split(' ')[0] ?? 'Usuario',
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isProfessor
+                      ? 'Rol: Profesor - Gestor de proyectos'
+                      : 'Rol: Estudiante',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white60,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            isProfessor
-                ? 'Bienvenido/a a la gestión de proyectos.'
-                : 'Revisa tus proyectos y tareas asignadas.',
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 24),
 
-          const Text(
-            'Acciones Rápidas',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ), // Reducido de 18 a 16
-          ),
-          const SizedBox(height: 12),
-
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              // 1. Proyectos
-              HomeGridItem(
-                title: 'Proyectos',
-                subtitle: isProfessor
-                    ? 'Gestionar proyectos'
-                    : 'Ver asignaciones',
-                icon: Icons.folder_open,
-                iconColor: Colors.deepOrange,
-                color: Colors.orange.shade50,
-                onTap: () => _onItemTapped(1),
+          // 2. SECCIÓN DE ACCIONES RÁPIDAS
+          Padding(
+            padding: const EdgeInsets.only(
+              top: 24,
+              left: 16,
+              right: 16,
+              bottom: 8,
+            ),
+            child: Text(
+              'Acciones Rápidas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
               ),
-
-              // 2. Perfil/Usuarios
-              HomeGridItem(
-                title: isProfessor ? 'Perfil' : 'Mi Perfil',
-                subtitle: 'Actualizar datos',
-                icon: Icons.person,
-                iconColor: Colors.blue,
-                color: Colors.blue.shade50,
-                onTap: () => _onItemTapped(2),
-              ),
-
-              // 3. Cerrar Sesión
-              HomeGridItem(
-                title: 'Cerrar Sesión',
-                subtitle: 'Desconectar cuenta',
-                icon: Icons.logout,
-                iconColor: Colors.red,
-                color: Colors.red.shade50,
-                onTap: () async {
-                  await FirebaseAuth.instance.signOut();
-                  _redirectToLogin();
-                },
-              ),
-            ],
+            ),
           ),
+
+          ActionListItem(
+            title: 'Proyectos',
+            subtitle: isProfessor
+                ? 'Gestionar equipos y tareas'
+                : 'Ver mis asignaciones',
+            icon: Icons.work_history,
+            iconColor: Colors.deepOrange,
+            onTap: () => _onItemTapped(1),
+          ),
+
+          ActionListItem(
+            title: isProfessor ? 'Perfil de Profesor' : 'Mi Perfil',
+            subtitle: 'Actualizar información personal y contactos',
+            icon: Icons.person_pin,
+            iconColor: Colors.blue,
+            onTap: () => _onItemTapped(2),
+          ),
+
+          ActionListItem(
+            title: 'Cerrar Sesión',
+            subtitle: 'Desconectar y salir de la cuenta',
+            icon: Icons.logout,
+            iconColor: Colors.red,
+            onTap: () async {
+              await FirebaseAuth.instance.signOut();
+              _redirectToLogin();
+            },
+          ),
+
+          // 3. SECCIÓN DE ESTADÍSTICAS (Ejemplo)
+          const Padding(
+            padding: EdgeInsets.only(top: 24, left: 16, right: 16, bottom: 8),
+            child: Text(
+              'Estadísticas Rápidas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+
+          // Tarjeta de Proyectos/Tareas (Ejemplo de información)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isProfessor
+                              ? 'Proyectos Activos'
+                              : 'Tareas Pendientes',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isProfessor
+                              ? '3'
+                              : '8', // **Aquí puedes poner el conteo real de Firestore**
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Icon(
+                      isProfessor ? Icons.group_work : Icons.assignment_late,
+                      size: 40,
+                      color: Colors.amber[700],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
+  // --- Método de saludo ---
   String _getSaludo() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -274,6 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- ESTRUCTURA PRINCIPAL DEL WIDGET ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -284,59 +368,53 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeGridItem extends StatelessWidget {
+// --- WIDGET NUEVO: ActionListItem (Fila de acción) ---
+class ActionListItem extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final Color iconColor;
-  final Color color;
   final VoidCallback onTap;
 
-  const HomeGridItem({
+  const ActionListItem({
     super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.iconColor,
-    required this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 3,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(4),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.orange[100]!, width: 1),
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 24, color: iconColor),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-              ),
-            ],
-          ),
+          child: Icon(icon, size: 24, color: iconColor),
         ),
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey,
+        ),
+        onTap: onTap,
       ),
     );
   }
