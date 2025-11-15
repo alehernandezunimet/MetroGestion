@@ -259,69 +259,68 @@ class _TasksScreenState extends State<TasksScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ExpansionTile(
-                        tilePadding: const EdgeInsets.only(
-                          left: 16,
-                          right: 8,
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        title: Text(
-                          data['titulo'] ?? 'Sin título',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                        subtitle: Row(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Fecha Límite: $fechaLimite',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () =>
-                              _confirmDeleteTask(context, tareaDoc.id),
-                        ),
-                        children: <Widget>[
-                          const Divider(height: 1, thickness: 1),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: 16.0,
-                              right: 16.0,
-                              bottom: 16.0,
-                              top: 8.0,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'Descripción:',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                // TÍTULO
+                                Flexible(
+                                  child: Text(
+                                    data['titulo'] ?? 'Sin título',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  data['descripcion'] ??
-                                      'Sin descripción detallada.',
-                                  style: const TextStyle(fontSize: 14),
+                                // BOTÓN DE ELIMINAR
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDeleteTask(context, tareaDoc.id),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+
+                            const Divider(height: 10, thickness: 1),
+
+                            Text(
+                              data['descripcion'] ?? 'Sin descripción.',
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Fecha Límite: $fechaLimite',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -329,8 +328,7 @@ class _TasksScreenState extends State<TasksScreen> {
               },
             ),
           ),
-
-          // 2. BOTÓN PARA AÑADIR TAREA
+          // BOTÓN PARA AÑADIR TAREA
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton.icon(
