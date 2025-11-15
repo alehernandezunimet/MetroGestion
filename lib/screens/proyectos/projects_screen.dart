@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-// --- PASO 1: IMPORTAR LA NUEVA PANTALLA ---
 import 'package:metro_gestion_proyecto/screens/proyectos/administrar_proyecto_screen.dart';
+import 'package:metro_gestion_proyecto/screens/proyectos/tareas_screen.dart'; // Asegúrate de que TasksScreen esté disponible
 
 class ProjectsScreen extends StatefulWidget {
   final String? userRole;
@@ -18,7 +18,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  String? _expandedProjectId;
+  // Ya no necesitamos _expandedProjectId si usamos ExpansionTile directamente
 
   Stream<QuerySnapshot> _getProjectsStream() {
     final User? user = _auth.currentUser;
@@ -26,6 +26,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       return const Stream.empty();
     }
 
+    // Si es profesor, muestra los proyectos que lidera.
     if (widget.userRole == 'profesor') {
       return _firestore
           .collection('proyectos')
@@ -33,6 +34,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           .where('estado', isEqualTo: 'activo')
           .snapshots();
     } else {
+      // Si es estudiante, muestra los proyectos en los que es miembro.
       return _firestore
           .collection('proyectos')
           .where('miembros', arrayContains: user.uid)
@@ -41,262 +43,105 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Mis Proyectos')),
-      body: _buildProjectList(),
-      floatingActionButton: _buildFab(),
-    );
-  }
-
-  Widget? _buildFab() {
-    if (widget.userRole == 'profesor') {
-      return FloatingActionButton(
-        onPressed: _showCrearProyectoDialog,
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      );
-    }
-    return null;
-  }
-
-  Widget _buildProjectList() {
+  // --- NUEVA FUNCIÓN PARA LISTAR TAREAS DENTRO DEL DESPLEGABLE ---
+  Widget _buildTasksList(String projectId) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _getProjectsStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+      stream: _firestore
+          .collection('proyectos')
+          .doc(projectId)
+          .collection('tareas')
+          .orderBy('fechaLimite') // Ordenar por fecha límite
+          .snapshots(),
+      builder: (context, taskSnapshot) {
+        if (taskSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(
-            child: Text(
-              'No tienes proyectos asignados.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
           );
         }
 
-        final projects = snapshot.data!.docs;
+        final tasks = taskSnapshot.data?.docs ?? [];
 
-        return ListView.builder(
-          itemCount: projects.length,
-          itemBuilder: (context, index) {
-            final project = projects[index];
-            return _buildProjectCard(project);
-          },
-        );
-      },
-    );
-  }
+        if (tasks.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+            child: Text('No hay tareas asignadas a este proyecto.'),
+          );
+        }
 
-  Widget _buildProjectCard(DocumentSnapshot project) {
-    final projectId = project.id;
-    final bool isExpanded = _expandedProjectId == projectId;
-    final data = project.data() as Map<String, dynamic>;
-
-    final String nombre = data.containsKey('nombre')
-        ? data['nombre']
-        : 'Sin Nombre';
-    final String descripcion = data.containsKey('descripcion')
-        ? data['descripcion']
-        : 'Sin Descripción';
-    final List<dynamic> miembros = data.containsKey('miembros')
-        ? data['miembros']
-        : [];
-
-    final Timestamp? fechaEntregaTimestamp = data.containsKey('fechaEntrega')
-        ? data['fechaEntrega']
-        : null;
-    final DateTime? fechaEntrega = fechaEntregaTimestamp?.toDate();
-    final String fechaFormateada = fechaEntrega != null
-        ? DateFormat('dd/MM/yyyy').format(fechaEntrega)
-        : 'No definida';
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            title: Text(
-              nombre,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            trailing: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
-            onTap: () {
-              setState(() {
-                if (isExpanded) {
-                  _expandedProjectId = null;
-                } else {
-                  _expandedProjectId = projectId;
-                }
-              });
-            },
-          ),
-
-          if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(),
-                  _buildDetailRow('Descripción Completa:', descripcion),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('Nº de Integrantes:', '${miembros.length}'),
-                  const SizedBox(height: 8),
-                  _buildDetailRow('Fecha de Entrega:', fechaFormateada),
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'Progreso:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  LinearProgressIndicator(
-                    value: 0.3,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.orange,
-                    ),
-                    minHeight: 6,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (widget.userRole == 'profesor')
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: ElevatedButton(
-                        // --- PASO 2: ACTUALIZAR EL onPressed ---
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AdministrarProyectoScreen(
-                                projectId: project.id,
-                                projectData:
-                                    data, // Pasamos los datos del proyecto
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text('Administrar'),
-                      ),
-                    ),
-                ],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+              child: Text(
+                'Tareas Asignadas:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
               ),
             ),
-        ],
-      ),
-    );
-  }
+            ...tasks.map((taskDoc) {
+              final taskData = taskDoc.data() as Map<String, dynamic>;
+              final Timestamp? fechaLimiteTimestamp = taskData['fechaLimite'];
+              final String fechaLimite = fechaLimiteTimestamp != null
+                  ? DateFormat(
+                      'dd MMM yyyy',
+                    ).format(fechaLimiteTimestamp.toDate())
+                  : 'Sin Fecha Límite';
 
-  Widget _buildDetailRow(String title, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(value),
-      ],
-    );
-  }
-
-  void _showCrearProyectoDialog() {
-    final TextEditingController nombreController = TextEditingController();
-    final TextEditingController descripcionController = TextEditingController();
-    final TextEditingController fechaController = TextEditingController();
-    DateTime? selectedDate;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Crear Nuevo Proyecto'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+              // Mostrar título, descripción y fecha límite
+              return ListTile(
+                dense: true,
+                leading: Icon(Icons.assignment, color: Colors.orange[700]),
+                title: Text(
+                  taskData['titulo'] ?? 'Tarea sin título',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: nombreController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre del Proyecto',
+                    Text(
+                      taskData['descripcion'] ?? 'Sin descripción.',
+                      maxLines: 2, // Muestra una descripción limitada
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
                       ),
                     ),
-                    TextField(
-                      controller: descripcionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción',
+                    const SizedBox(height: 4),
+                    Text(
+                      'Límite: $fechaLimite',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red[700],
+                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                    TextField(
-                      controller: fechaController,
-                      decoration: const InputDecoration(
-                        labelText: 'Fecha de Entrega',
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      readOnly: true,
-                      onTap: () async {
-                        final DateTime? picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime(2101),
-                        );
-                        if (picked != null && picked != selectedDate) {
-                          setStateDialog(() {
-                            selectedDate = picked;
-                            fechaController.text = DateFormat(
-                              'dd/MM/yyyy',
-                            ).format(picked);
-                          });
-                        }
-                      },
                     ),
                   ],
                 ),
-              ),
-              actions: [
-                TextButton(
-                  child: const Text('Cancelar'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                ElevatedButton(
-                  child: const Text('Crear'),
-                  onPressed: () {
-                    _crearProyecto(
-                      nombreController.text,
-                      descripcionController.text,
-                      selectedDate,
-                    );
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
+              );
+            }).toList(),
+            const SizedBox(height: 8),
+          ],
         );
       },
     );
   }
+  // ---------------------------------------------------------------------
 
+  // (Aquí irían los métodos _selectDate, _showCreateProjectDialog, _crearProyecto si no están ya en el snippet)
+  // ... (asumo que están más arriba o son correctos)
+
+  // (Mantenemos la función _crearProyecto aquí)
   Future<void> _crearProyecto(
     String nombre,
     String descripcion,
@@ -333,7 +178,268 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al crear el proyecto: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error al crear proyecto: $e')));
     }
+  }
+
+  // (Mantenemos la función _showCreateProjectDialog aquí)
+  void _showCreateProjectDialog() {
+    final TextEditingController nombreController = TextEditingController();
+    final TextEditingController descripcionController = TextEditingController();
+    DateTime? selectedDate;
+
+    // Helper para seleccionar la fecha (copiado de TasksScreen para completar)
+    Future<DateTime?> _selectDate(BuildContext context) async {
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime.now(),
+        lastDate: DateTime(2030),
+        helpText: 'SELECCIONAR FECHA DE ENTREGA',
+        cancelText: 'CANCELAR',
+        confirmText: 'CONFIRMAR',
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: ColorScheme.light(
+                primary: Theme.of(context).primaryColor,
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      return picked;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text('Crear Nuevo Proyecto'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    TextFormField(
+                      controller: nombreController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del Proyecto',
+                      ),
+                    ),
+                    TextFormField(
+                      controller: descripcionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Descripción',
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selectedDate == null
+                                ? 'Fecha de Entrega: No seleccionada'
+                                : 'Fecha de Entrega: ${DateFormat('dd/MM/yyyy').format(selectedDate!)}',
+                          ),
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.calendar_today, size: 16),
+                          label: const Text('SELECCIONAR'),
+                          onPressed: () async {
+                            final DateTime? picked = await _selectDate(context);
+                            if (picked != null) {
+                              setState(() {
+                                selectedDate = picked;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('CANCELAR'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('CREAR PROYECTO'),
+                  onPressed: () {
+                    if (nombreController.text.isEmpty ||
+                        descripcionController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'El nombre y la descripción son requeridos.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    _crearProyecto(
+                      nombreController.text.trim(),
+                      descripcionController.text.trim(),
+                      selectedDate,
+                    );
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isProfessor = widget.userRole == 'profesor';
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mis Proyectos'), elevation: 0),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _getProjectsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+              child: Text(
+                isProfessor
+                    ? 'Aún no has creado ningún proyecto.'
+                    : 'Aún no estás asignado a ningún proyecto.',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            );
+          }
+
+          final projects = snapshot.data!.docs;
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
+                  itemCount: projects.length,
+                  itemBuilder: (context, index) {
+                    final projectDoc = projects[index];
+                    final projectId = projectDoc.id;
+                    final data = projectDoc.data() as Map<String, dynamic>;
+
+                    // Detalles del proyecto
+                    final Timestamp? fechaTimestamp = data['fechaEntrega'];
+                    final String fechaEntrega = fechaTimestamp != null
+                        ? DateFormat(
+                            'dd MMM yyyy',
+                          ).format(fechaTimestamp.toDate())
+                        : 'No definida';
+
+                    // --- INICIO DEL CARD DE PROYECTO CON DESPLEGABLE DE TAREAS ---
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      elevation: 3,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+
+                        // Encabezado del Desplegable (Título y Descripción breve)
+                        title: Text(
+                          data['nombre'] ?? 'Proyecto sin nombre',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Entrega: $fechaEntrega',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              data['descripcion'] ?? 'Sin descripción.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+
+                        // Botón de Gestión (Solo para Profesores)
+                        trailing: isProfessor
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.manage_accounts,
+                                  color: Colors.orange,
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          AdministrarProyectoScreen(
+                                            projectId: projectId,
+                                            projectData: data,
+                                          ),
+                                    ),
+                                  );
+                                },
+                              )
+                            : null, // Los estudiantes no tienen botón de gestión
+                        // Contenido del Desplegable (Lista de Tareas)
+                        children: [_buildTasksList(projectId)],
+                      ),
+                    );
+                    // --- FIN DEL CARD DE PROYECTO CON DESPLEGABLE ---
+                  },
+                ),
+              ),
+
+              // Botón para crear proyecto (Solo para Profesores)
+              if (isProfessor)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _showCreateProjectDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('CREAR NUEVO PROYECTO'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
