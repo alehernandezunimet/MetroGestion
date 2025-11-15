@@ -510,7 +510,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 const SizedBox(height: 8),
                 _buildVisualizarMiembrosList(), // <-- WIDGET DE VISUALIZACIÓN
                 const SizedBox(height: 20), // Espacio antes de los botones
-
                 // --- FIN DE LA SECCIÓN DE VISUALIZACIÓN ---
                 SizedBox(
                   width: double.infinity,
