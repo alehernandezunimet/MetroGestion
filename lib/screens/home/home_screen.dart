@@ -41,323 +41,248 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (doc.exists) {
         setState(() {
-          _userRole = doc['rol'];
+          _userRole = doc.data()?['rol'];
           _userEmail = user!.email;
-          _userName = doc['nombre'] ?? user!.displayName ?? 'Usuario';
+          _userName =
+              doc.data()?['nombre'] + ' ' + (doc.data()?['apellido'] ?? '');
           _isLoading = false;
         });
       } else {
-        setState(() {
-          _userRole = 'estudiante';
-          _userEmail = user!.email;
-          _userName = user!.displayName ?? 'Usuario';
-          _isLoading = false;
-        });
+        _redirectToLogin();
       }
     } catch (e) {
-      setState(() {
-        _userRole = 'estudiante';
-        _userEmail = user!.email;
-        _userName = user!.displayName ?? 'Usuario';
-        _isLoading = false;
-      });
+      _redirectToLogin();
     }
   }
 
   void _redirectToLogin() {
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  void _onProfileUpdated() {
+    // Cuando el perfil se actualiza, recargamos los datos
+    _fetchUserData();
+  }
+
+  // --- Widgets de navegación para el body ---
+  Widget _getBodyWidget() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardBody(); // El nuevo widget que contiene el SingleChildScrollView
+      case 1:
+        return ProjectsScreen(userRole: _userRole);
+      case 2:
+        if (_userRole == 'profesor') {
+          return PerfilProfesorScreen(
+            userEmail: _userEmail,
+            userRole: _userRole,
+            userName: _userName,
+            onProfileUpdated: _onProfileUpdated,
+          );
+        } else {
+          return ProfileScreen(
+            userEmail: _userEmail,
+            userRole: _userRole,
+            userName: _userName,
+            onProfileUpdated: _onProfileUpdated,
+          );
+        }
+      default:
+        return const Center(child: Text('Pantalla no encontrada'));
     }
   }
 
-  void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    }
-  }
+  // --- FUNCIÓN CORREGIDA: Incluye SingleChildScrollView ---
+  Widget _buildDashboardBody() {
+    final bool isProfessor = _userRole == 'profesor';
 
-  @override
-  Widget build(BuildContext context) {
-    if (user == null && !_isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _redirectToLogin();
-      });
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    final List<String> pageTitles = ['Inicio', 'Mi Perfil', 'Mis Proyectos'];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(pageTitles[_selectedIndex]),
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.orange, // Color sólido
-        foregroundColor: Colors.white, // Texto blanco para contraste
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
-            tooltip: 'Cerrar Sesión',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(
-        child: CircularProgressIndicator(
-          color: Colors.orange, // Color sólido
-        ),
-      )
-          : Row(
+    return SingleChildScrollView(
+      // <-- SOLUCIÓN AL OVERFLOW
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            labelType: NavigationRailLabelType.all,
-            backgroundColor: Colors.grey[50],
-            indicatorColor: Colors.orange.withOpacity(0.3), // Naranja con transparencia
-            selectedIconTheme: const IconThemeData(color: Colors.orange), // Color sólido
-            selectedLabelTextStyle: const TextStyle(
-              color: Colors.orange, // Color sólido
+          // Saludo
+          Text(
+            '${_getSaludo()}, ${_userName?.split(' ')[0] ?? 'Usuario'}',
+            style: TextStyle(
+              fontSize: 26,
               fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
             ),
-            unselectedIconTheme: IconThemeData(color: Colors.grey[600]),
-            unselectedLabelTextStyle: TextStyle(color: Colors.grey[600]),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: Text('Inicio'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isProfessor
+                ? 'Bienvenido/a a la gestión de proyectos.'
+                : 'Revisa tus proyectos y tareas asignadas.',
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 30),
+
+          // Título de sección
+          const Text(
+            'Acciones Rápidas',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          // Grid de Elementos
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              // 1. Proyectos
+              HomeGridItem(
+                title: 'Proyectos',
+                subtitle: isProfessor
+                    ? 'Gestionar proyectos'
+                    : 'Ver asignaciones',
+                icon: Icons.folder_open,
+                iconColor: Colors.deepOrange,
+                color: Colors.orange.shade50,
+                onTap: () => _onItemTapped(1),
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.person_outlined),
-                selectedIcon: Icon(Icons.person),
-                label: Text('Perfil'),
+
+              // 2. Perfil/Usuarios
+              HomeGridItem(
+                title: isProfessor ? 'Perfil' : 'Mi Perfil',
+                subtitle: 'Actualizar datos',
+                icon: Icons.person,
+                iconColor: Colors.blue,
+                color: Colors.blue.shade50,
+                onTap: () => _onItemTapped(2),
               ),
-              NavigationRailDestination(
-                icon: Icon(Icons.folder_outlined),
-                selectedIcon: Icon(Icons.folder),
-                label: Text('Proyectos'),
+
+              // 3. Cerrar Sesión (Siempre útil en el Dashboard)
+              HomeGridItem(
+                title: 'Cerrar Sesión',
+                subtitle: 'Desconectar cuenta',
+                icon: Icons.logout,
+                iconColor: Colors.red,
+                color: Colors.red.shade50,
+                onTap: () async {
+                  await FirebaseAuth.instance.signOut();
+                  _redirectToLogin();
+                },
               ),
+
+              // Puedes añadir un cuarto elemento aquí si lo deseas.
+              // Por ejemplo:
+              // HomeGridItem(
+              //   title: 'Notificaciones',
+              //   subtitle: 'Ver alertas',
+              //   icon: Icons.notifications,
+              //   iconColor: Colors.green,
+              //   color: Colors.green.shade50,
+              //   onTap: () {},
+              // ),
             ],
           ),
 
-          const VerticalDivider(thickness: 1, width: 1),
+          const SizedBox(height: 40),
 
-          Expanded(child: _buildPage(_selectedIndex)),
+          // Puedes añadir un gráfico o lista de tareas pendientes aquí.
+          // Ejemplo:
+          // Center(
+          //   child: Text('Gráfico de progreso aquí (próximamente)'),
+          // ),
         ],
       ),
     );
   }
 
-  Widget _buildPage(int index) {
-    switch (index) {
-      case 0:
-        return _buildHomePage();
-      case 1:
-        return _userRole == 'profesor'
-            ? PerfilProfesorScreen(
-          userEmail: _userEmail,
-          userRole: _userRole,
-          userName: _userName,
-          onProfileUpdated: _fetchUserData,
-        )
-            : ProfileScreen(
-          userEmail: _userEmail,
-          userRole: _userRole,
-          userName: _userName,
-          onProfileUpdated: _fetchUserData,
-        );
-      case 2:
-        return ProjectsScreen(userRole: _userRole);
-      default:
-        return _buildHomePage();
+  // --- Método de saludo ---
+  String _getSaludo() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Buenos días';
+    } else if (hour < 18) {
+      return 'Buenas tardes';
+    } else {
+      return 'Buenas noches';
     }
   }
 
-  Widget _buildHomePage() {
-    String saludo = _getSaludo();
-    String rolTexto = _userRole == 'profesor' ? 'Profesor/a' : 'Estudiante';
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+  // --- Estructura principal de la pantalla ---
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Panel Principal'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              _redirectToLogin();
+            },
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.orange,
-                  child: Text(
-                    _userName!.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$saludo,',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        _userName!,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange,
-                        ),
-                      ),
-                      Text(
-                        rolTexto,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // Tarjeta de bienvenida
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.orange[100]!,
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.rocket_launch,
-                      size: 40,
-                      color: Colors.orange,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Bienvenido/a al Sistema de\nGestión de Proyectos',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Gestiona tus proyectos académicos de manera eficiente',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-
-            const Text(
-              'Accesos Rápidos',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildQuickAccessCard(
-                    icon: Icons.person,
-                    title: 'Mi Perfil',
-                    subtitle: 'Gestiona tu información',
-                    color: Colors.orange[50]!,
-                    iconColor: Colors.orange,
-                    onTap: () => setState(() => _selectedIndex = 1),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildQuickAccessCard(
-                    icon: Icons.folder,
-                    title: 'Proyectos',
-                    subtitle: 'Ver mis proyectos',
-                    color: Colors.orange[50]!,
-                    iconColor: Colors.orange,
-                    onTap: () => setState(() => _selectedIndex = 2),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      body: _getBodyWidget(),
+      bottomNavigationBar: BottomNavigationBar(
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Inicio',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.work),
+            label: 'Proyectos',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person),
+            label: _userRole == 'profesor' ? 'Perfil' : 'Mi Perfil',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Theme.of(context).primaryColor,
+        onTap: _onItemTapped,
       ),
     );
   }
+}
 
-  Widget _buildQuickAccessCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-    required VoidCallback onTap,
-  }) {
+// --- Widget para las tarjetas del Home ---
+class HomeGridItem extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color iconColor;
+  final Color color;
+  final VoidCallback onTap;
+
+  const HomeGridItem({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.iconColor,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -366,19 +291,12 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.orange[100]!,
-              width: 1,
-            ),
+            border: Border.all(color: Colors.orange[100]!, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                size: 32,
-                color: iconColor,
-              ),
+              Icon(icon, size: 32, color: iconColor),
               const SizedBox(height: 12),
               Text(
                 title,
@@ -400,16 +318,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  String _getSaludo() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Buenos días';
-    } else if (hour < 18) {
-      return 'Buenas tardes';
-    } else {
-      return 'Buenas noches';
-    }
   }
 }
