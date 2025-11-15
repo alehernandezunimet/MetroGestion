@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -18,12 +19,82 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _descripcionController = TextEditingController();
+  DateTime? _selectedDeadline;
+
+  String? _currentUserRole;
+  bool _isLoadingUser = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _descripcionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchUserData() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      final userDoc = await _firestore
+          .collection('usuarios')
+          .doc(user.uid)
+          .get();
+      if (userDoc.exists) {
+        _currentUserRole = userDoc.data()?['rol'];
+      }
+    }
+    setState(() {
+      _isLoadingUser = false;
+    });
+  }
+
+  Future<void> _toggleTaskCompletion(String taskId, bool isCompleted) async {
+    try {
+      await _firestore
+          .collection('proyectos')
+          .doc(widget.projectId)
+          .collection('tareas')
+          .doc(taskId)
+          .update({
+            'estado': isCompleted ? 'completada' : 'pendiente',
+            'fechaCompletada': isCompleted
+                ? FieldValue.serverTimestamp()
+                : null,
+          });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCompleted
+                ? 'Tarea marcada como completada. 🎉'
+                : 'Tarea marcada como pendiente. ⏳',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al actualizar tarea: $e')));
+    }
+  }
 
   Future<DateTime?> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime.now(), // No fechas pasadas
+      firstDate: DateTime.now(),
       lastDate: DateTime(2030),
       helpText: 'SELECCIONAR FECHA LÍMITE',
       cancelText: 'CANCELAR',
@@ -46,108 +117,29 @@ class _TasksScreenState extends State<TasksScreen> {
     return picked;
   }
 
-  void _showAddTaskDialog() {
-    final TextEditingController titleController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
-    DateTime? selectedDate;
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: const Text('Nueva Tarea'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    TextFormField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: 'Título'),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Requerido' : null,
-                    ),
-                    TextFormField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Descripción',
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selectedDate == null
-                                ? 'Fecha Límite: No seleccionada'
-                                : 'Fecha Límite: ${DateFormat('dd/MM/yyyy').format(selectedDate!)}',
-                          ),
-                        ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.calendar_today, size: 16),
-                          label: const Text('SELECCIONAR'),
-                          onPressed: () async {
-                            final DateTime? picked = await _selectDate(context);
-                            if (picked != null) {
-                              setState(() {
-                                selectedDate = picked;
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('CANCELAR'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                ElevatedButton(
-                  child: const Text('CREAR TAREA'),
-                  onPressed: () {
-                    if (titleController.text.isNotEmpty) {
-                      _addTask(
-                        titleController.text.trim(),
-                        descriptionController.text.trim(),
-                        selectedDate,
-                      );
-                      Navigator.of(context).pop();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('El título no puede estar vacío.'),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _addTask(
-    String title,
+  Future<void> _createTask(
+    String name,
     String description,
     DateTime? deadline,
   ) async {
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El nombre de la tarea no puede estar vacío.'),
+        ),
+      );
+      return;
+    }
+
     try {
       await _firestore
           .collection('proyectos')
           .doc(widget.projectId)
           .collection('tareas')
           .add({
-            'titulo': title,
+            'nombre': name,
             'descripcion': description,
+            'liderProyectoId': _auth.currentUser?.uid,
             'fechaCreacion': FieldValue.serverTimestamp(),
             'fechaLimite': deadline != null
                 ? Timestamp.fromDate(deadline)
@@ -156,61 +148,127 @@ class _TasksScreenState extends State<TasksScreen> {
             'asignadoA': [],
           });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Tarea creada con éxito.')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error al crear tarea: $e')));
     }
   }
 
-  Future<void> _deleteTask(String taskId) async {
-    try {
-      await _firestore
-          .collection('proyectos')
-          .doc(widget.projectId)
-          .collection('tareas')
-          .doc(taskId)
-          .delete();
+  void _showAddTaskDialog() {
+    _nombreController.clear();
+    _descripcionController.clear();
+    _selectedDeadline = null;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tarea eliminada con éxito.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al eliminar tarea: $e')));
-    }
-  }
-
-  void _confirmDeleteTask(BuildContext context, String taskId) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar Eliminación'),
-        content: const Text('¿Estás seguro de que deseas eliminar esta tarea?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCELAR'),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Añadir Nueva Tarea'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: ListBody(
+                children: <Widget>[
+                  TextFormField(
+                    controller: _nombreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de la Tarea',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Ingrese el nombre de la tarea';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descripcionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Descripción (Opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  StatefulBuilder(
+                    builder: (context, setInnerState) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedDeadline == null
+                                ? 'Fecha Límite: No establecida'
+                                : 'Fecha Límite: ${DateFormat('dd/MM/yyyy').format(_selectedDeadline!)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          TextButton.icon(
+                            onPressed: () async {
+                              final pickedDate = await _selectDate(context);
+                              if (pickedDate != null) {
+                                setInnerState(() {
+                                  _selectedDeadline = pickedDate;
+                                });
+                              }
+                            },
+                            icon: const Icon(Icons.calendar_today),
+                            label: const Text('Seleccionar Fecha Límite'),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteTask(taskId);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('ELIMINAR'),
-          ),
-        ],
-      ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Crear'),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _createTask(
+                    _nombreController.text.trim(),
+                    _descripcionController.text.trim(),
+                    _selectedDeadline,
+                  );
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingUser) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Tareas: ${widget.projectName}'),
+          elevation: 0,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final isProfessor = _currentUserRole == 'profesor';
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Tareas: ${widget.projectName}'),
@@ -227,119 +285,128 @@ class _TasksScreenState extends State<TasksScreen> {
                   .orderBy('fechaCreacion', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+
+                if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
                   return const Center(
-                    child: Text('No hay tareas asignadas para este proyecto.'),
+                    child: Text(
+                      'No hay tareas para este proyecto.',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                   );
                 }
 
-                final tareas = snapshot.data!.docs;
+                return ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: snapshot.data!.docs.map((doc) {
+                    final task = doc.data() as Map<String, dynamic>;
+                    final taskId = doc.id;
+                    final String nombre = task['nombre'] ?? 'Sin nombre';
+                    final String descripcion =
+                        task['descripcion'] ?? 'Sin descripción';
+                    final String estado = task['estado'] ?? 'pendiente';
+                    final Timestamp? fechaLimite = task['fechaLimite'];
 
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
-                  itemCount: tareas.length,
-                  itemBuilder: (context, index) {
-                    final tareaDoc = tareas[index];
-                    final data = tareaDoc.data() as Map<String, dynamic>;
-                    final Timestamp? fechaLimiteTimestamp = data['fechaLimite'];
-                    final String fechaLimite = fechaLimiteTimestamp != null
-                        ? DateFormat(
-                            'dd MMM yyyy',
-                          ).format(fechaLimiteTimestamp.toDate())
+                    final bool isCompleted = estado == 'completada';
+
+                    final String fechaLimiteText = fechaLimite != null
+                        ? DateFormat('dd/MM/yyyy').format(fechaLimite.toDate())
                         : 'No definida';
+
                     return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      elevation: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 2,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 16,
+                        ),
+                        title: Text(
+                          nombre,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            color: isCompleted ? Colors.grey : Colors.black87,
+                          ),
+                        ),
+                        subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // TÍTULO
-                                Flexible(
-                                  child: Text(
-                                    data['titulo'] ?? 'Sin título',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                // BOTÓN DE ELIMINAR
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () =>
-                                      _confirmDeleteTask(context, tareaDoc.id),
-                                ),
-                              ],
-                            ),
-
-                            const Divider(height: 10, thickness: 1),
-
+                            const SizedBox(height: 4),
                             Text(
-                              data['descripcion'] ?? 'Sin descripción.',
-                              style: const TextStyle(fontSize: 14),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
+                              descripcion,
+                              style: TextStyle(
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                fontStyle: isCompleted
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
+                              ),
                             ),
-
-                            const SizedBox(height: 10),
-
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Fecha Límite: $fechaLimite',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 4),
+                            Text(
+                              'Límite: $fechaLimiteText',
+                              style: TextStyle(
+                                color: isCompleted ? Colors.grey : Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'Estado: ${estado == 'completada' ? 'Completada' : 'Pendiente'}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isCompleted
+                                    ? Colors.green
+                                    : Colors.orange,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
+                        // Checkbox solo visible para estudiantes
+                        trailing: !isProfessor
+                            ? Checkbox(
+                                value: isCompleted,
+                                onChanged: (bool? newValue) {
+                                  if (newValue != null) {
+                                    _toggleTaskCompletion(taskId, newValue);
+                                  }
+                                },
+                                activeColor: Colors.green,
+                              )
+                            : null,
                       ),
                     );
-                  },
+                  }).toList(),
                 );
               },
             ),
           ),
-          // BOTÓN PARA AÑADIR TAREA
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              onPressed: _showAddTaskDialog,
-              icon: const Icon(Icons.add_box),
-              label: const Text('AÑADIR NUEVA TAREA'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+
+          if (isProfessor)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton.icon(
+                onPressed: _showAddTaskDialog,
+                icon: const Icon(Icons.add_box),
+                label: const Text('AÑADIR NUEVA TAREA'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
