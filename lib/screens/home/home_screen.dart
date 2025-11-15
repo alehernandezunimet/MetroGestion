@@ -42,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (doc.exists) {
         setState(() {
           _userRole = doc.data()?['rol'];
-          // Combinar nombre y apellido si es necesario, o solo el nombre
           final String nombre = doc.data()?['nombre'] ?? '';
           final String apellido = doc.data()?['apellido'] ?? '';
           _userName = nombre.isNotEmpty && apellido.isNotEmpty
@@ -58,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _redirectToLogin();
       }
     } catch (e) {
-      // Manejar error de Firebase o red
       _redirectToLogin();
     }
   }
@@ -76,11 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onProfileUpdated() {
-    // Cuando el perfil se actualiza, recargamos los datos
     _fetchUserData();
   }
 
-  // --- WIDGET AÑADIDO: Construye el menú lateral (Drawer) ---
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -127,7 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper para construir los ítems del Drawer
   Widget _buildDrawerItem(int index, IconData icon, String title) {
     return ListTile(
       leading: Icon(
@@ -149,15 +144,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       selected: _selectedIndex == index,
       onTap: () {
-        Navigator.of(context).pop(); // Cierra el Drawer
-        _onItemTapped(
-          index,
-        ); // Actualiza el índice y cambia el cuerpo de la pantalla
+        Navigator.of(context).pop();
+        _onItemTapped(index);
       },
     );
   }
 
-  // --- Widgets de navegación para el body (Se mantiene igual) ---
   Widget _getBodyWidget() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -189,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- FUNCIÓN CORREGIDA DEL DASHBOARD (Se mantiene el SingleChildScrollView) ---
   Widget _buildDashboardBody() {
     final bool isProfessor = _userRole == 'profesor';
 
@@ -198,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Saludo (Queda en el medio, que es el cuerpo de la pantalla)
+          // Saludo
           Text(
             '${_getSaludo()}, ${_userName?.split(' ')[0] ?? 'Usuario'}',
             style: TextStyle(
@@ -216,14 +207,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 30),
 
-          // Título de sección
           const Text(
             'Acciones Rápidas',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
 
-          // Grid de Elementos
           GridView.count(
             crossAxisCount: 2,
             crossAxisSpacing: 16,
@@ -253,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => _onItemTapped(2),
               ),
 
-              // 3. Cerrar Sesión (Ahora navega al logout del Drawer)
+              // 3. Cerrar Sesión
               HomeGridItem(
                 title: 'Cerrar Sesión',
                 subtitle: 'Desconectar cuenta',
@@ -272,7 +261,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Método de saludo (Se mantiene igual) ---
   String _getSaludo() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -284,24 +272,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- ESTRUCTURA PRINCIPAL DEL WIDGET (Modificada) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('METROGESTIÓN'), // Título general de la App
-        // El icono de menú (hamburguesa) aparecerá automáticamente aquí.
-        actions:
-            const [], // Quitamos el botón de logout para centralizarlo en el Drawer
-      ),
-      drawer: _buildDrawer(context), // <--- AÑADIMOS EL MENÚ LATERAL
+      appBar: AppBar(title: const Text('METROGESTIÓN'), actions: const []),
+      drawer: _buildDrawer(context),
       body: _getBodyWidget(),
-      // REMOVEMOS el bottomNavigationBar
     );
   }
 }
 
-// --- Widget para las tarjetas del Home (Se mantiene igual) ---
 class HomeGridItem extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -329,7 +309,7 @@ class HomeGridItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(12),
@@ -339,7 +319,7 @@ class HomeGridItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, size: 32, color: iconColor),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 title,
                 style: const TextStyle(
