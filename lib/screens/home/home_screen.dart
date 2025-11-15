@@ -42,15 +42,23 @@ class _HomeScreenState extends State<HomeScreen> {
       if (doc.exists) {
         setState(() {
           _userRole = doc.data()?['rol'];
+          // Combinar nombre y apellido si es necesario, o solo el nombre
+          final String nombre = doc.data()?['nombre'] ?? '';
+          final String apellido = doc.data()?['apellido'] ?? '';
+          _userName = nombre.isNotEmpty && apellido.isNotEmpty
+              ? '$nombre $apellido'
+              : nombre.isNotEmpty
+              ? nombre
+              : 'Usuario';
+
           _userEmail = user!.email;
-          _userName =
-              doc.data()?['nombre'] + ' ' + (doc.data()?['apellido'] ?? '');
           _isLoading = false;
         });
       } else {
         _redirectToLogin();
       }
     } catch (e) {
+      // Manejar error de Firebase o red
       _redirectToLogin();
     }
   }
@@ -72,7 +80,84 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUserData();
   }
 
-  // --- Widgets de navegación para el body ---
+  // --- WIDGET AÑADIDO: Construye el menú lateral (Drawer) ---
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          UserAccountsDrawerHeader(
+            accountName: Text(
+              _userName ?? 'Usuario',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            accountEmail: Text(_userEmail ?? 'No disponible'),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Theme.of(context).primaryColor),
+            ),
+            decoration: BoxDecoration(color: Theme.of(context).primaryColor),
+          ),
+          // Opciones de navegación
+          _buildDrawerItem(0, Icons.dashboard, 'Inicio'),
+          _buildDrawerItem(1, Icons.work, 'Proyectos'),
+          _buildDrawerItem(
+            2,
+            Icons.person,
+            _userRole == 'profesor' ? 'Perfil' : 'Mi Perfil',
+          ),
+
+          const Divider(),
+
+          // Opción de Cerrar Sesión
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text(
+              'Cerrar Sesión',
+              style: TextStyle(color: Colors.red),
+            ),
+            onTap: () async {
+              Navigator.of(context).pop(); // Cierra el Drawer
+              await FirebaseAuth.instance.signOut();
+              _redirectToLogin();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper para construir los ítems del Drawer
+  Widget _buildDrawerItem(int index, IconData icon, String title) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: _selectedIndex == index
+            ? Theme.of(context).primaryColor
+            : Colors.grey[700],
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: _selectedIndex == index
+              ? FontWeight.bold
+              : FontWeight.normal,
+          color: _selectedIndex == index
+              ? Theme.of(context).primaryColor
+              : Colors.black87,
+        ),
+      ),
+      selected: _selectedIndex == index,
+      onTap: () {
+        Navigator.of(context).pop(); // Cierra el Drawer
+        _onItemTapped(
+          index,
+        ); // Actualiza el índice y cambia el cuerpo de la pantalla
+      },
+    );
+  }
+
+  // --- Widgets de navegación para el body (Se mantiene igual) ---
   Widget _getBodyWidget() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -80,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     switch (_selectedIndex) {
       case 0:
-        return _buildDashboardBody(); // El nuevo widget que contiene el SingleChildScrollView
+        return _buildDashboardBody(); // Contiene el saludo "Buenos días..."
       case 1:
         return ProjectsScreen(userRole: _userRole);
       case 2:
@@ -104,17 +189,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- FUNCIÓN CORREGIDA: Incluye SingleChildScrollView ---
+  // --- FUNCIÓN CORREGIDA DEL DASHBOARD (Se mantiene el SingleChildScrollView) ---
   Widget _buildDashboardBody() {
     final bool isProfessor = _userRole == 'profesor';
 
     return SingleChildScrollView(
-      // <-- SOLUCIÓN AL OVERFLOW
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Saludo
+          // Saludo (Queda en el medio, que es el cuerpo de la pantalla)
           Text(
             '${_getSaludo()}, ${_userName?.split(' ')[0] ?? 'Usuario'}',
             style: TextStyle(
@@ -169,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => _onItemTapped(2),
               ),
 
-              // 3. Cerrar Sesión (Siempre útil en el Dashboard)
+              // 3. Cerrar Sesión (Ahora navega al logout del Drawer)
               HomeGridItem(
                 title: 'Cerrar Sesión',
                 subtitle: 'Desconectar cuenta',
@@ -181,33 +265,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   _redirectToLogin();
                 },
               ),
-
-              // Puedes añadir un cuarto elemento aquí si lo deseas.
-              // Por ejemplo:
-              // HomeGridItem(
-              //   title: 'Notificaciones',
-              //   subtitle: 'Ver alertas',
-              //   icon: Icons.notifications,
-              //   iconColor: Colors.green,
-              //   color: Colors.green.shade50,
-              //   onTap: () {},
-              // ),
             ],
           ),
-
-          const SizedBox(height: 40),
-
-          // Puedes añadir un gráfico o lista de tareas pendientes aquí.
-          // Ejemplo:
-          // Center(
-          //   child: Text('Gráfico de progreso aquí (próximamente)'),
-          // ),
         ],
       ),
     );
   }
 
-  // --- Método de saludo ---
+  // --- Método de saludo (Se mantiene igual) ---
   String _getSaludo() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -219,47 +284,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- Estructura principal de la pantalla ---
+  // --- ESTRUCTURA PRINCIPAL DEL WIDGET (Modificada) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel Principal'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              _redirectToLogin();
-            },
-          ),
-        ],
+        title: const Text('METROGESTIÓN'), // Título general de la App
+        // El icono de menú (hamburguesa) aparecerá automáticamente aquí.
+        actions:
+            const [], // Quitamos el botón de logout para centralizarlo en el Drawer
       ),
+      drawer: _buildDrawer(context), // <--- AÑADIMOS EL MENÚ LATERAL
       body: _getBodyWidget(),
-      bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Inicio',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.work),
-            label: 'Proyectos',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
-            label: _userRole == 'profesor' ? 'Perfil' : 'Mi Perfil',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        onTap: _onItemTapped,
-      ),
+      // REMOVEMOS el bottomNavigationBar
     );
   }
 }
 
-// --- Widget para las tarjetas del Home ---
+// --- Widget para las tarjetas del Home (Se mantiene igual) ---
 class HomeGridItem extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -303,15 +345,12 @@ class HomeGridItem extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87, // Texto oscuro
+                  color: Colors.black87,
                 ),
               ),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600], // Texto gris
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
