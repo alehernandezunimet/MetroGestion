@@ -21,6 +21,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   final user = FirebaseAuth.instance.currentUser;
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   @override
   void initState() {
     super.initState();
@@ -77,7 +80,36 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUserData();
   }
 
-  // --- WIDGET: Construye el menú lateral (Drawer) ---
+  Future<int> _fetchPendingCount() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return 0;
+
+    if (_userRole == 'profesor') {
+      try {
+        final projectSnapshot = await _firestore
+            .collection('proyectos')
+            .where('liderProyecto', isEqualTo: uid)
+            .where('estado', isEqualTo: 'activo')
+            .get();
+        return projectSnapshot.docs.length;
+      } catch (e) {
+        return 0;
+      }
+    } else {
+      try {
+        final taskSnapshot = await _firestore
+            .collection('tareas')
+            .where('asignadoA', arrayContains: uid)
+            .where('estado', isEqualTo: 'pendiente')
+            .get();
+
+        return taskSnapshot.docs.length;
+      } catch (e) {
+        return 0;
+      }
+    }
+  }
+
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: ListView(
@@ -95,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             decoration: BoxDecoration(color: Theme.of(context).primaryColor),
           ),
-          // Opciones de navegación
           _buildDrawerItem(0, Icons.dashboard, 'Inicio'),
           _buildDrawerItem(1, Icons.work, 'Proyectos'),
           _buildDrawerItem(
@@ -106,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const Divider(),
 
-          // Opción de Cerrar Sesión
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text(
@@ -124,7 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper para construir los ítems del Drawer
   Widget _buildDrawerItem(int index, IconData icon, String title) {
     return ListTile(
       leading: Icon(
@@ -152,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Widgets de navegación para el body ---
   Widget _getBodyWidget() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -184,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- DASHBOARD BODY (NUEVO DISEÑO) ---
   Widget _buildDashboardBody() {
     final bool isProfessor = _userRole == 'profesor';
 
@@ -192,7 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. BANNER DE BIENVENIDA
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24.0),
@@ -234,7 +260,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 2. SECCIÓN DE ACCIONES RÁPIDAS
           Padding(
             padding: const EdgeInsets.only(
               top: 24,
@@ -281,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
 
-          // 3. SECCIÓN DE ESTADÍSTICAS (Ejemplo)
           const Padding(
             padding: EdgeInsets.only(top: 24, left: 16, right: 16, bottom: 8),
             child: Text(
@@ -294,7 +318,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Tarjeta de Proyectos/Tareas (Ejemplo de información)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Card(
@@ -317,15 +340,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          isProfessor
-                              ? '3'
-                              : '8', // **Aquí puedes poner el conteo real de Firestore**
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
+
+                        FutureBuilder<int>(
+                          future: _fetchPendingCount(),
+                          builder: (context, snapshot) {
+                            String count = '...';
+                            if (snapshot.connectionState ==
+                                    ConnectionState.done &&
+                                snapshot.hasData) {
+                              count = snapshot.data!.toString();
+                            } else if (snapshot.hasError) {
+                              count = 'X';
+                            }
+
+                            return Text(
+                              count,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -345,7 +381,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Método de saludo ---
   String _getSaludo() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
@@ -357,7 +392,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- ESTRUCTURA PRINCIPAL DEL WIDGET ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -368,7 +402,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// --- WIDGET NUEVO: ActionListItem (Fila de acción) ---
 class ActionListItem extends StatelessWidget {
   final String title;
   final String subtitle;
