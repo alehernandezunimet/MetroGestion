@@ -18,6 +18,7 @@ class TasksScreen extends StatefulWidget {
 
 class _TasksScreenState extends State<TasksScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   Future<DateTime?> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -197,7 +198,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Cerrar el diálogo
+              Navigator.pop(context);
               _deleteTask(taskId);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -217,7 +218,6 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       body: Column(
         children: [
-          // LISTADO DE TAREAS
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore
@@ -250,28 +250,76 @@ class _TasksScreenState extends State<TasksScreen> {
                             'dd MMM yyyy',
                           ).format(fechaLimiteTimestamp.toDate())
                         : 'No definida';
-
                     return Card(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      elevation: 2,
-                      child: ListTile(
-                        leading: Icon(
-                          Icons.assignment,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        title: Text(
-                          data['titulo'] ?? 'Sin título',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('Fecha Límite: $fechaLimite'),
-                        // Botón de eliminar
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () =>
-                              _confirmDeleteTask(context, tareaDoc.id),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // TÍTULO
+                                Flexible(
+                                  child: Text(
+                                    data['titulo'] ?? 'Sin título',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                // BOTÓN DE ELIMINAR
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDeleteTask(context, tareaDoc.id),
+                                ),
+                              ],
+                            ),
+
+                            const Divider(height: 10, thickness: 1),
+
+                            Text(
+                              data['descripcion'] ?? 'Sin descripción.',
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Fecha Límite: $fechaLimite',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -280,8 +328,7 @@ class _TasksScreenState extends State<TasksScreen> {
               },
             ),
           ),
-
-          // AÑADIR TAREA
+          // BOTÓN PARA AÑADIR TAREA
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton.icon(
