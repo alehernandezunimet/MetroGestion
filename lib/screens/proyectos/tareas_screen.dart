@@ -165,6 +165,49 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
+  Future<void> _deleteTask(String taskId) async {
+    try {
+      await _firestore
+          .collection('proyectos')
+          .doc(widget.projectId)
+          .collection('tareas')
+          .doc(taskId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tarea eliminada con éxito.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al eliminar tarea: $e')));
+    }
+  }
+
+  void _confirmDeleteTask(BuildContext context, String taskId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Eliminación'),
+        content: const Text('¿Estás seguro de que deseas eliminar esta tarea?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar el diálogo
+              _deleteTask(taskId);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('ELIMINAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,15 +217,71 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       body: Column(
         children: [
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Aquí se listarán las tareas del proyecto.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
+          // LISTADO DE TAREAS
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('proyectos')
+                  .doc(widget.projectId)
+                  .collection('tareas')
+                  .orderBy('fechaCreacion', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text('No hay tareas asignadas para este proyecto.'),
+                  );
+                }
+
+                final tareas = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
+                  itemCount: tareas.length,
+                  itemBuilder: (context, index) {
+                    final tareaDoc = tareas[index];
+                    final data = tareaDoc.data() as Map<String, dynamic>;
+                    final Timestamp? fechaLimiteTimestamp = data['fechaLimite'];
+                    final String fechaLimite = fechaLimiteTimestamp != null
+                        ? DateFormat(
+                            'dd MMM yyyy',
+                          ).format(fechaLimiteTimestamp.toDate())
+                        : 'No definida';
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      elevation: 2,
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.assignment,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        title: Text(
+                          data['titulo'] ?? 'Sin título',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text('Fecha Límite: $fechaLimite'),
+                        // Botón de eliminar
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () =>
+                              _confirmDeleteTask(context, tareaDoc.id),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ),
 
+          // AÑADIR TAREA
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton.icon(
