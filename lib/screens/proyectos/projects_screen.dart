@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:metro_gestion_proyecto/screens/proyectos/administrar_proyecto_screen.dart';
 import 'package:metro_gestion_proyecto/screens/proyectos/tareas_screen.dart'; // Importación necesaria
+import 'package:percent_indicator/percent_indicator.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final String? userRole;
@@ -39,9 +40,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  // --- FUNCIÓN AÑADIDA: Maneja la actualización del estado de la tarea ---
+  // --- Maneja la actualización del estado de la tarea ---
   Future<void> _toggleTaskCompletion(
     String projectId,
+    String hitoId,
     String taskId,
     bool isCompleted,
   ) async {
@@ -49,6 +51,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       await _firestore
           .collection('proyectos')
           .doc(projectId)
+          .collection('hitos')
+          .doc(hitoId)
           .collection('tareas')
           .doc(taskId)
           .update({'estado': isCompleted ? 'completada' : 'pendiente'});
@@ -66,7 +70,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  // --- FUNCIÓN AÑADIDA: Construye la lista de tareas con el Checkbox ---
+  // --- Construye la lista de tareas con el Checkbox ---
   Widget _buildTasksList(String projectId) {
     final User? user = _auth.currentUser;
     if (user == null) {
@@ -79,8 +83,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       stream: _firestore
           .collection('proyectos')
           .doc(projectId)
-          .collection('tareas')
-          .orderBy('fechaLimite', descending: false)
+          .collection('hitos')
+          .orderBy('fechaCreacion')
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -97,85 +101,65 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No hay tareas para este proyecto.'),
-            ),
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: Text('No hay hitos (y por tanto, tareas) para este proyecto.')),
           );
         }
 
-        final tasks = snapshot.data!.docs;
+        final hitos = snapshot.data!.docs;
 
-        return ListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: tasks.map((doc) {
-            final taskId = doc.id;
-            final data = doc.data() as Map<String, dynamic>;
-            final String name = data['nombre'] ?? 'Tarea sin nombre';
-            final String estado = data['estado'] ?? 'pendiente';
-            final bool isCompleted = estado == 'completada';
-            final List<dynamic> assignedTo = data['asignadoA'] ?? [];
-            final Timestamp? deadlineTimestamp = data['fechaLimite'];
-            final String deadline = deadlineTimestamp != null
-                ? DateFormat('dd/MM/yyyy').format(deadlineTimestamp.toDate())
-                : 'Sin límite';
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Wrap(
+            spacing: 16.0,
+            runSpacing: 16.0,
+            alignment: WrapAlignment.center,
+            children: hitos.map((hitoDoc) {
+              final hitoData = hitoDoc.data() as Map<String, dynamic>;
+              return StreamBuilder<QuerySnapshot>(
+                stream: hitoDoc.reference.collection('tareas').snapshots(),
+                builder: (context, tasksSnapshot) {
+                  if (!tasksSnapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  final tasks = tasksSnapshot.data!.docs;
+                  final totalTasks = tasks.length;
+                  final completedTasks = tasks.where((t) => (t.data() as Map<String, dynamic>)['estado'] == 'completada').length;
+                  final progress = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
+                  final progressPercent = (progress * 100).toStringAsFixed(0);
 
-            // FILTRO PARA ESTUDIANTES: Solo muestra tareas asignadas a él.
-            if (!isProfessor &&
-                assignedTo.isNotEmpty &&
-                !assignedTo.contains(user.uid)) {
-              return Container();
-            }
-
-            return Card(
-              elevation: 0,
-              margin: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
-              child: ListTile(
-                title: Text(
-                  name,
-                  style: TextStyle(
-                    decoration: isCompleted
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                    color: isCompleted ? Colors.grey : Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Límite: $deadline',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  return SizedBox(
+                    width: 120,
+                    child: Column(
+                      children: [
+                        CircularPercentIndicator(
+                          radius: 45.0,
+                          lineWidth: 8.0,
+                          percent: progress,
+                          center: Text(
+                            '$progressPercent%',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),
+                          ),
+                          progressColor: Colors.green,
+                          backgroundColor: Colors.grey[300]!,
+                          circularStrokeCap: CircularStrokeCap.round,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          hitoData['nombre'] ?? 'Hito',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Estado: ${estado.toUpperCase()}',
-                      style: TextStyle(
-                        color: isCompleted ? Colors.green : Colors.orange,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                // Checkbox solo visible para estudiantes
-                trailing: !isProfessor
-                    ? Checkbox(
-                        value: isCompleted,
-                        onChanged: (bool? newValue) {
-                          if (newValue != null) {
-                            // Llamada a la función para actualizar Firestore
-                            _toggleTaskCompletion(projectId, taskId, newValue);
-                          }
-                        },
-                        activeColor: Colors.green,
-                      )
-                    : null,
-              ),
-            );
-          }).toList(),
+                  );
+                },
+              );
+            }).toList(),
+          ),
         );
       },
     );
@@ -340,6 +324,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           final int memberCount =
                               (data['miembros'] as List? ?? []).length;
 
+                          final int materialCount =
+                              (data['materiales'] as List? ?? []).length;
+
                           return Card(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -363,6 +350,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   ),
                                   Text(
                                     'Miembros: $memberCount',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Materiales: $materialCount',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[600],

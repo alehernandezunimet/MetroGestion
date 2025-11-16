@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 
 class TasksScreen extends StatefulWidget {
   final String projectId;
-  final String projectName;
+  final String hitoId;
+  final String hitoName;
 
   const TasksScreen({
     super.key,
     required this.projectId,
-    required this.projectName,
+    required this.hitoId,
+    required this.hitoName,
   });
 
   @override
@@ -63,6 +65,8 @@ class _TasksScreenState extends State<TasksScreen> {
       await _firestore
           .collection('proyectos')
           .doc(widget.projectId)
+          .collection('hitos')
+          .doc(widget.hitoId)
           .collection('tareas')
           .doc(taskId)
           .update({
@@ -141,6 +145,8 @@ class _TasksScreenState extends State<TasksScreen> {
       await _firestore
           .collection('proyectos')
           .doc(widget.projectId)
+          .collection('hitos')
+          .doc(widget.hitoId)
           .collection('tareas')
           .add({
             'nombre': name,
@@ -265,10 +271,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     if (_isLoadingUser) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text('Tareas: ${widget.projectName}'),
-          elevation: 0,
-        ),
+        appBar: AppBar(title: Text('Cargando Tareas...')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -277,8 +280,8 @@ class _TasksScreenState extends State<TasksScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Tareas: ${widget.projectName}'),
-        elevation: 0,
+          title: Text('Tareas de: ${widget.hitoName}'),
+          elevation: 0,
       ),
       body: Column(
         children: [
@@ -287,6 +290,8 @@ class _TasksScreenState extends State<TasksScreen> {
               stream: _firestore
                   .collection('proyectos')
                   .doc(widget.projectId)
+                  .collection('hitos')
+                  .doc(widget.hitoId)
                   .collection('tareas')
                   .orderBy('fechaCreacion', descending: true)
                   .snapshots(),
@@ -381,18 +386,15 @@ class _TasksScreenState extends State<TasksScreen> {
                             ),
                           ],
                         ),
-                        // Checkbox solo visible para estudiantes
-                        trailing: !isProfessor
-                            ? Checkbox(
-                                value: isCompleted,
-                                onChanged: (bool? newValue) {
-                                  if (newValue != null) {
-                                    _toggleTaskCompletion(taskId, newValue);
-                                  }
-                                },
-                                activeColor: Colors.green,
-                              )
-                            : null,
+                        trailing: Checkbox(
+                          value: isCompleted,
+                          onChanged: (bool? newValue) {
+                            if (newValue != null) {
+                              _toggleTaskCompletion(taskId, newValue);
+                            }
+                          },
+                          activeColor: Colors.green,
+                        ),
                       ),
                     );
                   }).toList(),

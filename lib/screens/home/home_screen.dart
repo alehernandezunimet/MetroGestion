@@ -175,8 +175,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       selected: _selectedIndex == index,
       onTap: () {
-        Navigator.of(context).pop();
-        _onItemTapped(index);
+        Navigator.of(context).pop(); // Cierra el drawer
+        if (index == 1) { // Si se selecciona "Proyectos"
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ProjectsScreen(userRole: _userRole),
+            ),
+          );
+        } else { // Para "Inicio" o "Perfil"
+          _onItemTapped(index);
+        }
       },
     );
   }
@@ -283,15 +291,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? 'Gestionar equipos y tareas'
                 : 'Ver mis asignaciones',
             icon: Icons.work_history,
-            iconColor: Colors.deepOrange,
-            onTap: () => _onItemTapped(1),
+            iconColor: Colors.blue,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ProjectsScreen(userRole: _userRole),
+                ),
+              );
+            },
           ),
 
           ActionListItem(
             title: isProfessor ? 'Perfil de Profesor' : 'Mi Perfil',
             subtitle: 'Actualizar información personal y contactos',
             icon: Icons.person_pin,
-            iconColor: Colors.blue,
+            iconColor: Colors.deepOrange,
             onTap: () => _onItemTapped(2),
           ),
 

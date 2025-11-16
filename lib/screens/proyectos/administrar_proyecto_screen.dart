@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'tareas_screen.dart';
+import 'hitos_screen.dart';
+import 'project_progress_dashboard.dart'; // Importamos el nuevo dashboard
 
 class AdministrarProyectoScreen extends StatefulWidget {
   final String projectId;
@@ -31,6 +32,9 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
   // Guardamos una copia local de los miembros para actualizar la UI en vivo
   late List<dynamic> _currentMiembros;
 
+  // Guardamos una copia local de los materiales
+  late List<dynamic> _currentMateriales;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +55,9 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
     // Inicializamos la lista de miembros
     _currentMiembros = List<dynamic>.from(widget.projectData['miembros'] ?? []);
+
+    // Inicializamos la lista de materiales
+    _currentMateriales = List<dynamic>.from(widget.projectData['materiales'] ?? []);
   }
 
   @override
@@ -368,6 +375,186 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
+  // --- WIDGET: Visualizar lista de materiales (para la PANTALLA) ---
+  Widget _buildVisualizarMaterialesList() {
+    if (_currentMateriales.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: const Text(
+          'No hay materiales asignados.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: _currentMateriales.asMap().entries.map((entry) {
+            int index = entry.key;
+            Map<String, dynamic> material =
+                Map<String, dynamic>.from(entry.value);
+
+            return Container(
+              color: index.isEven ? Colors.white : Colors.grey[50],
+              child: ListTile(
+                leading: Icon(Icons.build_circle_outlined, color: Colors.orange[700]),
+                title: Text(material['nombre'] ?? 'Sin nombre'),
+                trailing: Text(
+                  'Cantidad: ${material['cantidad'] ?? 0}',
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // --- LÓGICA: Mostrar diálogo para AGREGAR material ---
+  void _showAgregarMaterialDialog() {
+    final TextEditingController nombreController = TextEditingController();
+    final TextEditingController cantidadController = TextEditingController();
+    final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Agregar Material'),
+          content: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nombreController,
+                  decoration: const InputDecoration(labelText: 'Nombre del material'),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Ingrese un nombre' : null,
+                ),
+                TextFormField(
+                  controller: cantidadController,
+                  decoration: const InputDecoration(labelText: 'Cantidad'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Ingrese una cantidad';
+                    }
+                    if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                      return 'Ingrese un número válido';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (dialogFormKey.currentState!.validate()) {
+                  final nuevoMaterial = {
+                    'nombre': nombreController.text.trim(),
+                    'cantidad': int.parse(cantidadController.text.trim()),
+                  };
+                  _procesarAgregarMaterial(nuevoMaterial);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Agregar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- LÓGICA: Procesar la adición del material ---
+  Future<void> _procesarAgregarMaterial(Map<String, dynamic> material) async {
+    try {
+      await _firestore.collection('proyectos').doc(widget.projectId).update({
+        'materiales': FieldValue.arrayUnion([material]),
+      });
+
+      setState(() {
+        _currentMateriales.add(material);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Material agregado con éxito.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al agregar material: $e')),
+      );
+    }
+  }
+
+  // --- LÓGICA: Mostrar diálogo para ELIMINAR material ---
+  void _showEliminarMaterialDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Eliminar Material'),
+          content: Container(
+            width: double.maxFinite,
+            child: _buildMaterialesListDialog(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- LÓGICA: Widget para construir la lista de materiales (para el DIÁLOGO) ---
+  Widget _buildMaterialesListDialog() {
+    if (_currentMateriales.isEmpty) {
+      return const Text('No hay materiales para eliminar.');
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: _currentMateriales.length,
+      itemBuilder: (context, index) {
+        final material = Map<String, dynamic>.from(_currentMateriales[index]);
+        return ListTile(
+          title: Text(material['nombre']),
+          trailing: IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              _removerMaterial(material);
+              Navigator.pop(context);
+            },
+          ),
+        );
+      },
+    );
+  }
+
   // --- LÓGICA: Helper para buscar detalles de los UIDs ---
   Future<List<Map<String, dynamic>>> _getMiembrosDetalles(
     List<dynamic> miembrosIds,
@@ -408,6 +595,27 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     }
   }
 
+  // --- LÓGICA: Procesar la eliminación del material ---
+  Future<void> _removerMaterial(Map<String, dynamic> material) async {
+    try {
+      await _firestore.collection('proyectos').doc(widget.projectId).update({
+        'materiales': FieldValue.arrayRemove([material]),
+      });
+
+      setState(() {
+        _currentMateriales.remove(material);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Material eliminado con éxito.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al eliminar material: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -421,6 +629,66 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // --- SECCIÓN: DATOS DEL PROYECTO ---
+                const Text(
+                  'Dashboard de Progreso',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // --- WIDGET DEL DASHBOARD CON DATOS REALES DE FIRESTORE ---
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: _firestore
+                      .collection('proyectos')
+                      .doc(widget.projectId)
+                      .collection('hitos')
+                      .snapshots(),
+                  builder: (context, hitosSnapshot) {
+                    if (hitosSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (hitosSnapshot.hasError) {
+                      return const Center(child: Text('Error al cargar datos del dashboard.'));
+                    }
+
+                    final hitoDocs = hitosSnapshot.data?.docs ?? [];
+
+                    // Usamos un FutureBuilder para esperar a que todas las tareas de todos los hitos se carguen
+                    return FutureBuilder<List<Hito>>(
+                      future: Future.wait(hitoDocs.map((hitoDoc) async {
+                        final tareasSnapshot = await hitoDoc.reference.collection('tareas').get();
+                        final tasks = tareasSnapshot.docs.map((taskDoc) {
+                          final data = taskDoc.data();
+                          return Task(
+                            id: taskDoc.id,
+                            name: data['nombre'] ?? 'Tarea sin nombre',
+                            isCompleted: data['estado'] == 'completada',
+                          );
+                        }).toList();
+                        return Hito(
+                          id: hitoDoc.id,
+                          name: hitoDoc.data()['nombre'] ?? 'Hito sin nombre',
+                          tasks: tasks,
+                        );
+                      }).toList()),
+                      builder: (context, projectSnapshot) {
+                        if (projectSnapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        final project = Project(
+                          id: widget.projectId,
+                          name: widget.projectData['nombre'] ?? 'Proyecto',
+                          milestones: projectSnapshot.data ?? [],
+                        );
+
+                        return ProjectProgressDashboard(project: project);
+                      },
+                    );
+                  },
+                ),
+
+                const Divider(height: 40),
+
                 const Text(
                   'Datos del Proyecto',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -538,9 +806,53 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
                 const Divider(height: 40),
 
+                // --- SECCIÓN: GESTIONAR MATERIALES ---
+                const Text(
+                  'Gestionar Materiales',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                Text(
+                  'Materiales Asignados (${_currentMateriales.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildVisualizarMaterialesList(),
+                const SizedBox(height: 20),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showAgregarMaterialDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[700],
+                    ),
+                    icon: const Icon(Icons.add_box_outlined),
+                    label: const Text('Agregar Material'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showEliminarMaterialDialog,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar Material'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[400],
+                    ),
+                  ),
+                ),
+                const Divider(height: 40),
+
                 // --- SECCIÓN: TAREAS ---
                 const Text(
-                  'Gestionar Tareas',
+                  'Gestionar Hitos y Tareas',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -551,15 +863,15 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => TasksScreen(
+                          builder: (context) => HitosScreen(
                             projectId: widget.projectId,
                             projectName: widget.projectData['nombre'],
                           ),
                         ),
                       );
                     },
-                    icon: const Icon(Icons.add_task),
-                    label: const Text('Gestionar tareas'),
+                    icon: const Icon(Icons.flag_circle_outlined),
+                    label: const Text('Gestionar Hitos'),
                   ),
                 ),
               ],

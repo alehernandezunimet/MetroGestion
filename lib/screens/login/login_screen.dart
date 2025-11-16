@@ -31,17 +31,17 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (error == null) {
-          if (!mounted) return; // <-- AÑADIR ESTA LÍNEA
+          if (!mounted) return;
           // Navegar si el login fue exitoso
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          if (!mounted) return; // <-- AÑADIR ESTA LÍNEA (Buena práctica)
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
         }
       } finally {
-        if (mounted) { // <-- AÑADIR ESTA COMPROBACIÓN (Buena práctica)
+        if (mounted) {
           setState(() {
             _isLoading = false;
           });
