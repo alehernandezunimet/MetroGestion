@@ -314,111 +314,103 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'No hay proyectos asignados o creados.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  if (isProfessor)
-                    const Text(
-                      '¡Crea uno ahora!',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                ],
-              ),
-            );
-          }
 
-          final projects = snapshot.data!.docs;
+          final bool hasProjects = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+          final projects = hasProjects ? snapshot.data!.docs : [];
 
           return Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  itemCount: projects.length,
-                  itemBuilder: (context, index) {
-                    final DocumentSnapshot doc = projects[index];
-                    final String projectId = doc.id;
-                    final Map<String, dynamic> data =
-                        doc.data()! as Map<String, dynamic>;
-                    final String name = data['nombre'] ?? 'Proyecto sin nombre';
-                    // La descripción y la fecha no se usan directamente en el título, pero se mantienen.
-                    // final String description = data['descripcion'] ?? 'Sin descripción';
-                    final Timestamp? fechaEntrega = data['fechaEntrega'];
-                    final String deadline = fechaEntrega != null
-                        ? DateFormat('dd/MM/yyyy').format(fechaEntrega.toDate())
-                        : 'Sin límite';
+                child: hasProjects
+                    ? ListView.builder(
+                        itemCount: projects.length,
+                        itemBuilder: (context, index) {
+                          final DocumentSnapshot doc = projects[index];
+                          final String projectId = doc.id;
+                          final Map<String, dynamic> data =
+                              doc.data()! as Map<String, dynamic>;
+                          final String name =
+                              data['nombre'] ?? 'Proyecto sin nombre';
+                          final Timestamp? fechaEntrega = data['fechaEntrega'];
+                          final String deadline = fechaEntrega != null
+                              ? DateFormat('dd/MM/yyyy')
+                                  .format(fechaEntrega.toDate())
+                              : 'Sin límite';
 
-                    final int memberCount =
-                        (data['miembros'] as List? ?? []).length;
+                          final int memberCount =
+                              (data['miembros'] as List? ?? []).length;
 
-                    // --- INICIO DEL CARD DE PROYECTO CON DESPLEGABLE ---
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: ExpansionTile(
-                        title: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Entrega: $deadline',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
                             ),
-                            Text(
-                              'Miembros: $memberCount',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                            child: ExpansionTile(
+                              title: Text(
+                                name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
-                            ),
-                          ],
-                        ),
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          child: const Icon(Icons.folder, color: Colors.white),
-                        ),
-                        // Botón de administración (Solo para profesores)
-                        trailing: isProfessor
-                            ? IconButton(
-                                icon: const Icon(Icons.settings),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          AdministrarProyectoScreen(
-                                            projectId: projectId,
-                                            projectData: data,
-                                          ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Entrega: $deadline',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
                                     ),
-                                  );
-                                },
-                              )
-                            : null, // Los estudiantes no tienen botón de gestión
-                        // Contenido del Desplegable (Lista de Tareas)
-                        // LLAMADA A LA FUNCIÓN CON EL CHECKBOX
-                        children: [
-                          _buildTasksList(projectId),
-                          const SizedBox(height: 10),
-                        ],
+                                  ),
+                                  Text(
+                                    'Miembros: $memberCount',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    Theme.of(context).primaryColor,
+                                child: const Icon(Icons.folder,
+                                    color: Colors.white),
+                              ),
+                              trailing: isProfessor
+                                  ? IconButton(
+                                      icon: const Icon(Icons.settings),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                AdministrarProyectoScreen(
+                                              projectId: projectId,
+                                              projectData: data,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : null,
+                              children: [
+                                _buildTasksList(projectId),
+                                const SizedBox(height: 10),
+                              ],
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          isProfessor
+                              ? 'No has creado proyectos. ¡Crea uno ahora!'
+                              : 'No estás asignado a ningún proyecto.',
+                          style:
+                              const TextStyle(fontSize: 16, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    );
-                    // --- FIN DEL CARD DE PROYECTO CON DESPLEGABLE ---
-                  },
-                ),
               ),
 
               // Botón para crear proyecto (Solo para Profesores)
