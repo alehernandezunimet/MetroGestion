@@ -29,6 +29,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         return;
       }
+
+      // Verificación del dominio del correo
+      if (!_emailController.text.trim().endsWith('@correo.unimet.edu.ve')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Solo se permiten correos institucionales.')),
+        );
+        return;
+      }
       setState(() {
         _isLoading = true;
       });
@@ -152,10 +161,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) =>
-                    (value == null || !value.contains('@'))
-                        ? 'Ingrese un correo válido'
-                        : null,
+                    validator: (value) {
+                      if (value == null || !value.contains('@')) {
+                        return 'Ingrese un correo válido';
+                      }
+                      if (!value.endsWith('@correo.unimet.edu.ve')) {
+                        return 'Solo se permiten correos @correo.unimet.edu.ve';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 
