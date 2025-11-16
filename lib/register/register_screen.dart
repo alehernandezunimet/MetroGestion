@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:metro_gestion_proyecto/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,7 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
   TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   String? _selectedRole;
 
@@ -43,45 +42,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       try {
-        UserCredential cred = await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
         // Combinar nombre y apellido en un solo campo
         String nombreCompleto = '${_nombreController.text.trim()} ${_apellidoController.text.trim()}';
 
-        await FirebaseFirestore.instance
-            .collection('usuarios')
-            .doc(cred.user!.uid)
-            .set({
-          'email': _emailController.text.trim(),
-          'nombre': nombreCompleto,
-          'rol': _selectedRole,
-          'fechaRegistro': DateTime.now(),
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '¡Cuenta creada con éxito! Ya puedes iniciar sesión.',
-            ),
-          ),
+        final String? error = await _authService.registerUser(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          nombreCompleto: nombreCompleto,
+          rol: _selectedRole!,
         );
-        Navigator.of(context).pop();
-      } on FirebaseAuthException catch (e) {
-        String errorMessage = 'Error al registrar. Intente de nuevo.';
-        if (e.code == 'weak-password') {
-          errorMessage =
-          'La contraseña es muy débil (debe tener al menos 6 caracteres).';
-        } else if (e.code == 'email-already-in-use') {
-          errorMessage = 'Este correo electrónico ya está en uso.';
-        } else if (e.code == 'invalid-email') {
-          errorMessage = 'El formato del correo no es válido.';
+
+        if (error == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('¡Cuenta creada con éxito! Ya puedes iniciar sesión.'),
+            ),
+          );
+          Navigator.of(context).pop();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       } finally {
         setState(() {
           _isLoading = false;

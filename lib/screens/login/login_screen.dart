@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:metro_gestion_proyecto/screens/home/home_screen.dart';
 import 'package:flutter/gestures.dart';
+import 'package:metro_gestion_proyecto/services/auth_service.dart';
 import 'package:metro_gestion_proyecto/register/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
   void _handleLogin() async {
@@ -25,64 +25,42 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        await _auth.signInWithEmailAndPassword(
+        final String? error = await _authService.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      } on FirebaseAuthException catch (e) {
-        String errorMessage =
-            'Error: Credenciales no válidas. Intente de nuevo.';
-        if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-          errorMessage = 'Email o contraseña incorrectos.';
-        } else if (e.code == 'invalid-email') {
-          errorMessage = 'Formato de email inválido.';
+        if (error == null) {
+          if (!mounted) return; // <-- AÑADIR ESTA LÍNEA
+          // Navegar si el login fue exitoso
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          if (!mounted) return; // <-- AÑADIR ESTA LÍNEA (Buena práctica)
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       } finally {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) { // <-- AÑADIR ESTA COMPROBACIÓN (Buena práctica)
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
 
   void _resetPassword() async {
-
     final email = _emailController.text.trim();
-    if (email.isEmpty) {
+    final String? error = await _authService.sendPasswordResetEmail(email: email);
+    if (error == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Por favor, ingrese su correo electrónico'),
+          content: Text('Se ha enviado un correo para restablecer su contraseña.'),
         ),
       );
-      return;
-    }
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Se ha enviado un correo para restablecer su contraseña',
-          ),
-        ),
-      );
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'Error al enviar correo de restablecimiento.';
-      if (e.code == 'user-not-found') {
-        errorMessage = 'No existe un usuario con ese correo.';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = 'Formato de correo inválido.';
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
