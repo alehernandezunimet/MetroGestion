@@ -3,8 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:metro_gestion_proyecto/screens/proyectos/administrar_proyecto_screen.dart';
-import 'package:metro_gestion_proyecto/screens/proyectos/tareas_screen.dart'; // Importación necesaria
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:metro_gestion_proyecto/screens/proyectos/student_project_detail_screen.dart';
 
 class ProjectsScreen extends StatefulWidget {
   final String? userRole;
@@ -40,46 +40,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  // --- Maneja la actualización del estado de la tarea ---
-  Future<void> _toggleTaskCompletion(
-    String projectId,
-    String hitoId,
-    String taskId,
-    bool isCompleted,
-  ) async {
-    try {
-      await _firestore
-          .collection('proyectos')
-          .doc(projectId)
-          .collection('hitos')
-          .doc(hitoId)
-          .collection('tareas')
-          .doc(taskId)
-          .update({'estado': isCompleted ? 'completada' : 'pendiente'});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Tarea ${isCompleted ? 'completada' : 'marcada como pendiente'} con éxito.',
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al actualizar tarea: $e')));
-    }
-  }
-
-  // --- Construye la lista de tareas con el Checkbox ---
-  Widget _buildTasksList(String projectId) {
-    final User? user = _auth.currentUser;
-    if (user == null) {
-      return const Center(child: Text('No hay usuario autenticado.'));
-    }
-
+  // --- Construye el contenido del panel desplegable del proyecto ---
+  Widget _buildProjectExpansionContent(BuildContext context, String projectId, Map<String, dynamic> projectData) {
     final bool isProfessor = widget.userRole == 'profesor';
 
-    return StreamBuilder<QuerySnapshot>(
+    // El mini-dashboard de hitos es visible para ambos roles.
+    final hitoDashboard = StreamBuilder<QuerySnapshot>(
       stream: _firestore
           .collection('proyectos')
           .doc(projectId)
@@ -95,15 +61,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
           );
         }
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error al cargar tareas: ${snapshot.error}'),
-          );
-        }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Center(child: Text('No hay hitos (y por tanto, tareas) para este proyecto.')),
+            child: Center(child: Text('No hay hitos definidos para este proyecto.')),
           );
         }
 
@@ -163,6 +124,39 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         );
       },
     );
+
+    // Si es estudiante, añadimos el botón "Ver Proyecto" debajo del dashboard.
+    if (!isProfessor) {
+      return Column(
+        children: [
+          hitoDashboard,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => StudentProjectDetailScreen(
+                      projectId: projectId,
+                      projectData: projectData,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.visibility_outlined),
+              label: const Text('Ver Detalles y Entregar Tareas'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 40),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Si es profesor, solo mostramos el dashboard.
+    return hitoDashboard;
   }
 
   // --- MÉTODOS EXISTENTES PARA CREACIÓN DE PROYECTO (Reconstruidos del snippet) ---
@@ -388,7 +382,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                     )
                                   : null,
                               children: [
-                                _buildTasksList(projectId),
+                                _buildProjectExpansionContent(context, projectId, data),
                                 const SizedBox(height: 10),
                               ],
                             ),

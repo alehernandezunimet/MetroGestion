@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TasksScreen extends StatefulWidget {
   final String projectId;
@@ -267,6 +268,52 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
+  void _showSubmissionDetails(Map<String, dynamic> submission) {
+    final comment = submission['comment'] as String?;
+    final fileUrl = submission['fileUrl'] as String?;
+    final fileName = submission['fileName'] as String?;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Detalles de la Entrega'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Comentario del Estudiante:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(comment != null && comment.isNotEmpty ? comment : 'Sin comentario.'),
+              const SizedBox(height: 16),
+              const Text('Archivo Adjunto:', style: TextStyle(fontWeight: FontWeight.bold)),
+              if (fileUrl != null)
+                InkWell(
+                  onTap: () async {
+                    final uri = Uri.parse(fileUrl);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: Text(
+                    fileName ?? 'Descargar archivo',
+                    style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                  ),
+                )
+              else
+                const Text('No se adjuntó ningún archivo.'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoadingUser) {
@@ -322,6 +369,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     final String descripcion =
                         task['descripcion'] ?? 'Sin descripción';
                     final String estado = task['estado'] ?? 'pendiente';
+                    final Map<String, dynamic>? submission = task['submission'];
                     final Timestamp? fechaLimite = task['fechaLimite'];
 
                     final bool isCompleted = estado == 'completada';
@@ -336,65 +384,70 @@ class _TasksScreenState extends State<TasksScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 16,
-                        ),
-                        title: Text(
-                          nombre,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
-                            color: isCompleted ? Colors.grey : Colors.black87,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 16,
+                            ),
+                            title: Text(
+                              nombre,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                decoration: isCompleted ? TextDecoration.lineThrough : TextDecoration.none,
+                                color: isCompleted ? Colors.grey : Colors.black87,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  descripcion,
+                                  style: TextStyle(
+                                    decoration: isCompleted ? TextDecoration.lineThrough : TextDecoration.none,
+                                    fontStyle: isCompleted ? FontStyle.italic : FontStyle.normal,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Límite: $fechaLimiteText',
+                                  style: TextStyle(color: isCompleted ? Colors.grey : Colors.red, fontSize: 12),
+                                ),
+                                Text(
+                                  'Estado: ${estado == 'completada' ? 'Completada' : 'Pendiente'}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: isCompleted ? Colors.green : Colors.orange,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: Checkbox(
+                              value: isCompleted,
+                              onChanged: (bool? newValue) {
+                                if (newValue != null) {
+                                  _toggleTaskCompletion(taskId, newValue);
+                                }
+                              },
+                              activeColor: Colors.green,
+                            ),
                           ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              descripcion,
-                              style: TextStyle(
-                                decoration: isCompleted
-                                    ? TextDecoration.lineThrough
-                                    : TextDecoration.none,
-                                fontStyle: isCompleted
-                                    ? FontStyle.italic
-                                    : FontStyle.normal,
+                          if (submission != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: TextButton.icon(
+                                onPressed: () => _showSubmissionDetails(submission),
+                                icon: const Icon(Icons.visibility, size: 18),
+                                label: const Text('Ver Entrega'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Theme.of(context).primaryColor,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Límite: $fechaLimiteText',
-                              style: TextStyle(
-                                color: isCompleted ? Colors.grey : Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                            Text(
-                              'Estado: ${estado == 'completada' ? 'Completada' : 'Pendiente'}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isCompleted
-                                    ? Colors.green
-                                    : Colors.orange,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: Checkbox(
-                          value: isCompleted,
-                          onChanged: (bool? newValue) {
-                            if (newValue != null) {
-                              _toggleTaskCompletion(taskId, newValue);
-                            }
-                          },
-                          activeColor: Colors.green,
-                        ),
+                        ],
                       ),
                     );
                   }).toList(),
