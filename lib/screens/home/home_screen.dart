@@ -5,6 +5,8 @@ import 'package:metro_gestion_proyecto/screens/login/login_screen.dart';
 import 'package:metro_gestion_proyecto/screens/perfil/perfil_profesor_screen.dart';
 import 'package:metro_gestion_proyecto/screens/perfil/perfil_screen.dart';
 import 'package:metro_gestion_proyecto/screens/proyectos/projects_screen.dart';
+import 'package:metro_gestion_proyecto/screens/calendario/calendario_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -129,14 +131,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _buildDrawerItem(0, Icons.dashboard, 'Inicio'),
           _buildDrawerItem(1, Icons.work, 'Proyectos'),
+          ListTile(
+            leading: Icon(
+              Icons.calendar_month,
+              color: Colors.grey[700],
+            ),
+            title: const Text(
+              'Calendario Académico',
+              style: TextStyle(
+                fontWeight: FontWeight.normal,
+                color: Colors.black87,
+              ),
+            ),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CalendarioScreen(
+                    userRole: _userRole ?? 'estudiante',
+                  ),
+                ),
+              );
+            },
+          ),
           _buildDrawerItem(
             2,
             Icons.person,
             _userRole == 'profesor' ? 'Perfil' : 'Mi Perfil',
           ),
-
           const Divider(),
-
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text(
