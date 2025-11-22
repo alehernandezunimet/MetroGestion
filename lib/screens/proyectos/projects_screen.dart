@@ -41,7 +41,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   // --- Construye el contenido del panel desplegable del proyecto ---
-  Widget _buildProjectExpansionContent(BuildContext context, String projectId, Map<String, dynamic> projectData) {
+  Widget _buildProjectExpansionContent(
+    BuildContext context,
+    String projectId,
+    Map<String, dynamic> projectData,
+  ) {
     final bool isProfessor = widget.userRole == 'profesor';
 
     // El mini-dashboard de hitos es visible para ambos roles.
@@ -64,7 +68,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Center(child: Text('No hay hitos definidos para este proyecto.')),
+            child: Center(
+              child: Text('No hay hitos definidos para este proyecto.'),
+            ),
           );
         }
 
@@ -86,8 +92,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   }
                   final tasks = tasksSnapshot.data!.docs;
                   final totalTasks = tasks.length;
-                  final completedTasks = tasks.where((t) => (t.data() as Map<String, dynamic>)['estado'] == 'completada').length;
-                  final progress = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
+                  final completedTasks = tasks
+                      .where(
+                        (t) =>
+                            (t.data() as Map<String, dynamic>)['estado'] ==
+                            'completada',
+                      )
+                      .length;
+                  final progress = totalTasks > 0
+                      ? completedTasks / totalTasks
+                      : 0.0;
                   final progressPercent = (progress * 100).toStringAsFixed(0);
 
                   return SizedBox(
@@ -100,7 +114,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           percent: progress,
                           center: Text(
                             '$progressPercent%',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16.0,
+                            ),
                           ),
                           progressColor: Colors.green,
                           backgroundColor: Colors.grey[300]!,
@@ -112,7 +129,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -159,7 +179,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     return hitoDashboard;
   }
 
-  // --- MÉTODOS EXISTENTES PARA CREACIÓN DE PROYECTO (Reconstruidos del snippet) ---
+  // --- MÉTODOS PARA CREACIÓN DE PROYECTO ---
   void _showCreateProjectDialog() {
     final nombreController = TextEditingController();
     final descripcionController = TextEditingController();
@@ -282,7 +302,22 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final bool isProfessor = widget.userRole == 'profesor';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis Proyectos')),
+      appBar: AppBar(
+        title: const Text('Mis Proyectos'),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      // Botón Flotante solo para el Profesor
+      floatingActionButton: isProfessor
+          ? FloatingActionButton(
+              onPressed: _showCreateProjectDialog,
+              backgroundColor: Colors.blue[700],
+              elevation: 4,
+              tooltip: 'Crear Nuevo Proyecto',
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            )
+          : null,
       body: StreamBuilder<QuerySnapshot>(
         stream: _getProjectsStream(),
         builder: (context, snapshot) {
@@ -293,128 +328,127 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final bool hasProjects = snapshot.hasData && snapshot.data!.docs.isNotEmpty;
+          final bool hasProjects =
+              snapshot.hasData && snapshot.data!.docs.isNotEmpty;
           final projects = hasProjects ? snapshot.data!.docs : [];
 
-          return Column(
-            children: [
-              Expanded(
-                child: hasProjects
-                    ? ListView.builder(
-                        itemCount: projects.length,
-                        itemBuilder: (context, index) {
-                          final DocumentSnapshot doc = projects[index];
-                          final String projectId = doc.id;
-                          final Map<String, dynamic> data =
-                              doc.data()! as Map<String, dynamic>;
-                          final String name =
-                              data['nombre'] ?? 'Proyecto sin nombre';
-                          final Timestamp? fechaEntrega = data['fechaEntrega'];
-                          final String deadline = fechaEntrega != null
-                              ? DateFormat('dd/MM/yyyy')
-                                  .format(fechaEntrega.toDate())
-                              : 'Sin límite';
-
-                          final int memberCount =
-                              (data['miembros'] as List? ?? []).length;
-
-                          final int materialCount =
-                              (data['materiales'] as List? ?? []).length;
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: ExpansionTile(
-                              title: Text(
-                                name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Entrega: $deadline',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Miembros: $memberCount',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                  Text(
-                                    'Materiales: $materialCount',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    Theme.of(context).primaryColor,
-                                child: const Icon(Icons.folder,
-                                    color: Colors.white),
-                              ),
-                              trailing: isProfessor
-                                  ? IconButton(
-                                      icon: const Icon(Icons.settings),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                AdministrarProyectoScreen(
-                                              projectId: projectId,
-                                              projectData: data,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : null,
-                              children: [
-                                _buildProjectExpansionContent(context, projectId, data),
-                                const SizedBox(height: 10),
-                              ],
-                            ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Text(
-                          isProfessor
-                              ? 'No has creado proyectos. ¡Crea uno ahora!'
-                              : 'No estás asignado a ningún proyecto.',
-                          style:
-                              const TextStyle(fontSize: 16, color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+          if (!hasProjects) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder_off_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isProfessor
+                        ? 'No has creado proyectos.\n¡Toca el botón + para crear uno!'
+                        : 'No estás asignado a ningún proyecto.',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
+            );
+          }
 
-              // Botón para crear proyecto (Solo para Profesores)
-              if (isProfessor)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ElevatedButton.icon(
-                    onPressed: _showCreateProjectDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('CREAR NUEVO PROYECTO'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: projects.length,
+            itemBuilder: (context, index) {
+              final DocumentSnapshot doc = projects[index];
+              final String projectId = doc.id;
+              final Map<String, dynamic> data =
+                  doc.data()! as Map<String, dynamic>;
+              final String name = data['nombre'] ?? 'Proyecto sin nombre';
+              final Timestamp? fechaEntrega = data['fechaEntrega'];
+              final String deadline = fechaEntrega != null
+                  ? DateFormat('dd/MM/yyyy').format(fechaEntrega.toDate())
+                  : 'Sin límite';
+
+              final int memberCount = (data['miembros'] as List? ?? []).length;
+
+              final int materialCount =
+                  (data['materiales'] as List? ?? []).length;
+
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ExpansionTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue[100],
+                    child: Icon(Icons.folder, color: Colors.blue[800]),
+                  ),
+                  title: Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Entrega: $deadline',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.people, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$memberCount',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(Icons.build, size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$materialCount',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Botón de Ajustes para ir a Administrar (Solo Profesor)
+                  trailing: isProfessor
+                      ? IconButton(
+                          icon: const Icon(Icons.settings, color: Colors.grey),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AdministrarProyectoScreen(
+                                  projectId: projectId,
+                                  projectData: data,
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : null,
+                  children: [
+                    _buildProjectExpansionContent(context, projectId, data),
+                    const SizedBox(height: 10),
+                  ],
                 ),
-            ],
+              );
+            },
           );
         },
       ),

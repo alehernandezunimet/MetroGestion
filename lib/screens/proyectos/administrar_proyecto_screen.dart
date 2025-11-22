@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'hitos_screen.dart';
-import 'project_progress_dashboard.dart'; // Importamos el nuevo dashboard
+import 'project_progress_dashboard.dart';
 
 class AdministrarProyectoScreen extends StatefulWidget {
   final String projectId;
-  // Convertimos a stateful para poder modificarlo localmente
   final Map<String, dynamic> projectData;
 
   const AdministrarProyectoScreen({
@@ -29,10 +28,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
   DateTime? _selectedDate;
   bool _isLoading = false;
 
-  // Guardamos una copia local de los miembros para actualizar la UI en vivo
-  late List<dynamic> _currentMiembros;
+  // Variable para controlar el modo edición
+  bool _isEditing = false;
 
-  // Guardamos una copia local de los materiales
+  late List<dynamic> _currentMiembros;
   late List<dynamic> _currentMateriales;
 
   @override
@@ -53,11 +52,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       _fechaController = TextEditingController();
     }
 
-    // Inicializamos la lista de miembros
     _currentMiembros = List<dynamic>.from(widget.projectData['miembros'] ?? []);
-
-    // Inicializamos la lista de materiales
-    _currentMateriales = List<dynamic>.from(widget.projectData['materiales'] ?? []);
+    _currentMateriales = List<dynamic>.from(
+      widget.projectData['materiales'] ?? [],
+    );
   }
 
   @override
@@ -79,7 +77,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
     try {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
-        'descripcion': _descripcionController.text,
+        'descripcion': _descripcionController.text.trim(),
         'fechaEntrega': _selectedDate != null
             ? Timestamp.fromDate(_selectedDate!)
             : null,
@@ -88,7 +86,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Proyecto actualizado con éxito.')),
       );
-      Navigator.pop(context);
+
+      // Al guardar exitosamente, salimos del modo edición
+      setState(() {
+        _isEditing = false;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al actualizar el proyecto: $e')),
@@ -175,10 +177,8 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Procesar la adición del estudiante ---
   Future<void> _procesarAgregarEstudiante(String email) async {
     try {
-      // 1. Buscar al usuario por email y rol
       final query = await _firestore
           .collection('usuarios')
           .where('email', isEqualTo: email)
@@ -198,7 +198,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       final studentDoc = query.docs.first;
       final studentId = studentDoc.id;
 
-      // 2. Verificar si ya es miembro
       if (_currentMiembros.contains(studentId)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -208,12 +207,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         return;
       }
 
-      // 3. Agregar al proyecto en Firestore
       await _firestore.collection('proyectos').doc(widget.projectId).update({
         'miembros': FieldValue.arrayUnion([studentId]),
       });
 
-      // 4. Actualizar estado local para reflejar el cambio
       setState(() {
         _currentMiembros.add(studentId);
       });
@@ -228,21 +225,17 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     }
   }
 
-  // --- LÓGICA: Mostrar diálogo para ELIMINAR estudiante ---
   void _showEliminarEstudianteDialog() {
     showDialog(
       context: context,
       builder: (context) {
-        // Usamos StatefulBuilder para que la lista se actualice en vivo
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
               title: const Text('Eliminar Estudiante'),
-              content: Container(
+              content: SizedBox(
                 width: double.maxFinite,
-                child: _buildMiembrosListDialog(
-                  setStateDialog,
-                ), // Renombrado para claridad
+                child: _buildMiembrosListDialog(setStateDialog),
               ),
               actions: [
                 TextButton(
@@ -257,13 +250,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Widget para construir la lista de miembros (para el DIÁLOGO) ---
   Widget _buildMiembrosListDialog(StateSetter setStateDialog) {
     if (_currentMiembros.isEmpty) {
       return const Text('No hay estudiantes en este proyecto.');
     }
 
-    // Usamos un FutureBuilder para obtener los nombres de los UIDs
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _getMiembrosDetalles(_currentMiembros),
       builder: (context, snapshot) {
@@ -287,13 +278,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
               trailing: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () async {
-                  // Lógica para eliminar
                   await _removerMiembro(miembro['uid']);
-                  // Actualizamos el estado de la pantalla principal
                   setState(() {
                     _currentMiembros.remove(miembro['uid']);
                   });
-                  // Actualizamos el estado del diálogo
                   setStateDialog(() {});
                 },
               ),
@@ -304,7 +292,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- WIDGET: Visualizar lista de miembros (para la PANTALLA) ---
   Widget _buildVisualizarMiembrosList() {
     if (_currentMiembros.isEmpty) {
       return Container(
@@ -323,7 +310,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       );
     }
 
-    // Usamos un FutureBuilder para obtener los nombres de los UIDs
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _getMiembrosDetalles(_currentMiembros),
       builder: (context, snapshot) {
@@ -341,13 +327,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
         final miembros = snapshot.data!;
 
-        // Usamos un Column dentro del SingleChildScrollView, dentro de un contenedor
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.grey[300]!),
           ),
-          // Usamos ClipRRect para que los bordes del ListTile no se salgan
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Column(
@@ -356,7 +340,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 Map<String, dynamic> miembro = entry.value;
 
                 return Container(
-                  // Alternamos colores para mejor legibilidad
                   color: index.isEven ? Colors.white : Colors.grey[50],
                   child: ListTile(
                     leading: Icon(
@@ -375,7 +358,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- WIDGET: Visualizar lista de materiales (para la PANTALLA) ---
   Widget _buildVisualizarMaterialesList() {
     if (_currentMateriales.isEmpty) {
       return Container(
@@ -404,13 +386,17 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         child: Column(
           children: _currentMateriales.asMap().entries.map((entry) {
             int index = entry.key;
-            Map<String, dynamic> material =
-                Map<String, dynamic>.from(entry.value);
+            Map<String, dynamic> material = Map<String, dynamic>.from(
+              entry.value,
+            );
 
             return Container(
               color: index.isEven ? Colors.white : Colors.grey[50],
               child: ListTile(
-                leading: Icon(Icons.build_circle_outlined, color: Colors.orange[700]),
+                leading: Icon(
+                  Icons.build_circle_outlined,
+                  color: Colors.orange[700],
+                ),
                 title: Text(material['nombre'] ?? 'Sin nombre'),
                 trailing: Text(
                   'Cantidad: ${material['cantidad'] ?? 0}',
@@ -424,7 +410,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Mostrar diálogo para AGREGAR material ---
   void _showAgregarMaterialDialog() {
     final TextEditingController nombreController = TextEditingController();
     final TextEditingController cantidadController = TextEditingController();
@@ -442,9 +427,12 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
               children: [
                 TextFormField(
                   controller: nombreController,
-                  decoration: const InputDecoration(labelText: 'Nombre del material'),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Ingrese un nombre' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del material',
+                  ),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Ingrese un nombre'
+                      : null,
                 ),
                 TextFormField(
                   controller: cantidadController,
@@ -487,7 +475,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Procesar la adición del material ---
   Future<void> _procesarAgregarMaterial(Map<String, dynamic> material) async {
     try {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
@@ -502,20 +489,19 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         const SnackBar(content: Text('Material agregado con éxito.')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al agregar material: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al agregar material: $e')));
     }
   }
 
-  // --- LÓGICA: Mostrar diálogo para ELIMINAR material ---
   void _showEliminarMaterialDialog() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Eliminar Material'),
-          content: Container(
+          content: SizedBox(
             width: double.maxFinite,
             child: _buildMaterialesListDialog(),
           ),
@@ -530,7 +516,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Widget para construir la lista de materiales (para el DIÁLOGO) ---
   Widget _buildMaterialesListDialog() {
     if (_currentMateriales.isEmpty) {
       return const Text('No hay materiales para eliminar.');
@@ -555,7 +540,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     );
   }
 
-  // --- LÓGICA: Helper para buscar detalles de los UIDs ---
   Future<List<Map<String, dynamic>>> _getMiembrosDetalles(
     List<dynamic> miembrosIds,
   ) async {
@@ -579,7 +563,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     return miembrosData;
   }
 
-  // --- LÓGICA: Procesar la eliminación del estudiante ---
   Future<void> _removerMiembro(String studentId) async {
     try {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
@@ -595,7 +578,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     }
   }
 
-  // --- LÓGICA: Procesar la eliminación del material ---
   Future<void> _removerMaterial(Map<String, dynamic> material) async {
     try {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
@@ -610,9 +592,9 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         const SnackBar(content: Text('Material eliminado con éxito.')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al eliminar material: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al eliminar material: $e')));
     }
   }
 
@@ -628,14 +610,13 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- SECCIÓN: DATOS DEL PROYECTO ---
+                // --- SECCIÓN: DASHBOARD ---
                 const Text(
                   'Dashboard de Progreso',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
-                // --- WIDGET DEL DASHBOARD CON DATOS REALES DE FIRESTORE ---
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _firestore
                       .collection('proyectos')
@@ -643,36 +624,45 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                       .collection('hitos')
                       .snapshots(),
                   builder: (context, hitosSnapshot) {
-                    if (hitosSnapshot.connectionState == ConnectionState.waiting) {
+                    if (hitosSnapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (hitosSnapshot.hasError) {
-                      return const Center(child: Text('Error al cargar datos del dashboard.'));
+                      return const Center(
+                        child: Text('Error al cargar datos del dashboard.'),
+                      );
                     }
 
                     final hitoDocs = hitosSnapshot.data?.docs ?? [];
 
-                    // Usamos un FutureBuilder para esperar a que todas las tareas de todos los hitos se carguen
                     return FutureBuilder<List<Hito>>(
-                      future: Future.wait(hitoDocs.map((hitoDoc) async {
-                        final tareasSnapshot = await hitoDoc.reference.collection('tareas').get();
-                        final tasks = tareasSnapshot.docs.map((taskDoc) {
-                          final data = taskDoc.data();
-                          return Task(
-                            id: taskDoc.id,
-                            name: data['nombre'] ?? 'Tarea sin nombre',
-                            isCompleted: data['estado'] == 'completada',
+                      future: Future.wait(
+                        hitoDocs.map((hitoDoc) async {
+                          final tareasSnapshot = await hitoDoc.reference
+                              .collection('tareas')
+                              .get();
+                          final tasks = tareasSnapshot.docs.map((taskDoc) {
+                            final data = taskDoc.data();
+                            return Task(
+                              id: taskDoc.id,
+                              name: data['nombre'] ?? 'Tarea sin nombre',
+                              isCompleted: data['estado'] == 'completada',
+                            );
+                          }).toList();
+                          return Hito(
+                            id: hitoDoc.id,
+                            name: hitoDoc.data()['nombre'] ?? 'Hito sin nombre',
+                            tasks: tasks,
                           );
-                        }).toList();
-                        return Hito(
-                          id: hitoDoc.id,
-                          name: hitoDoc.data()['nombre'] ?? 'Hito sin nombre',
-                          tasks: tasks,
-                        );
-                      }).toList()),
+                        }).toList(),
+                      ),
                       builder: (context, projectSnapshot) {
-                        if (projectSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (projectSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         final project = Project(
@@ -689,24 +679,64 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
                 const Divider(height: 40),
 
-                const Text(
-                  'Datos del Proyecto',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // --- SECCIÓN: DATOS DEL PROYECTO (MODIFICADA) ---
+                // Cabecera con Título y Botón Editar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Información General',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    // Solo mostramos el lápiz si NO estamos editando
+                    if (!_isEditing)
+                      IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _isEditing = true;
+                          });
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        tooltip: 'Editar información',
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
                 Text(
                   'Nombre: ${widget.projectData['nombre']}',
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
+                // Campo Descripción
                 TextFormField(
                   controller: _descripcionController,
-                  decoration: const InputDecoration(
+                  enabled: _isEditing, // Bloqueado si no se edita
+                  decoration: InputDecoration(
                     labelText: 'Descripción',
-                    border: OutlineInputBorder(),
+                    // Borde normal al editar, sin borde al leer
+                    border: _isEditing
+                        ? const OutlineInputBorder()
+                        : InputBorder.none,
+                    // Fondo suave al editar
+                    filled: _isEditing,
+                    fillColor: _isEditing
+                        ? Colors.grey[50]
+                        : Colors.transparent,
+                    contentPadding: _isEditing
+                        ? const EdgeInsets.all(12)
+                        : EdgeInsets.zero,
+                    alignLabelWithHint: true,
                   ),
+                  style: const TextStyle(color: Colors.black87, fontSize: 15),
                   maxLines: 4,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -717,15 +747,31 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // Campo Fecha
                 TextFormField(
                   controller: _fechaController,
-                  decoration: const InputDecoration(
+                  enabled: _isEditing, // Bloqueado si no se edita
+                  decoration: InputDecoration(
                     labelText: 'Fecha de Entrega',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
+                    border: _isEditing
+                        ? const OutlineInputBorder()
+                        : InputBorder.none,
+                    filled: _isEditing,
+                    fillColor: _isEditing
+                        ? Colors.grey[50]
+                        : Colors.transparent,
+                    contentPadding: _isEditing
+                        ? const EdgeInsets.all(12)
+                        : EdgeInsets.zero,
+                    suffixIcon: _isEditing
+                        ? const Icon(Icons.calendar_today)
+                        : null,
                   ),
-                  readOnly: true,
+                  readOnly: true, // El teclado no sale, solo el picker
                   onTap: () async {
+                    if (!_isEditing)
+                      return; // Solo funciona si estamos editando
+
                     final DateTime? picked = await showDatePicker(
                       context: context,
                       initialDate: _selectedDate ?? DateTime.now(),
@@ -742,21 +788,39 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                     }
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
 
-                // Botón Guardar Cambios
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _guardarCambios,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700], // Azul
+                // Botón Guardar Cambios (Pequeño y condicional)
+                if (_isEditing)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _guardarCambios,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            Colors.green[600], // Verde para guardar
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.save, size: 18),
+                      label: const Text('Guardar'),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Guardar Cambios'),
                   ),
-                ),
 
                 const Divider(height: 40),
 
@@ -767,7 +831,6 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // --- SECCIÓN DE VISUALIZACIÓN ---
                 Text(
                   'Miembros Actuales (${_currentMiembros.length})',
                   style: const TextStyle(
@@ -777,18 +840,21 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _buildVisualizarMiembrosList(), // <-- WIDGET DE VISUALIZACIÓN
-                const SizedBox(height: 20), // Espacio antes de los botones
-                // --- FIN DE LA SECCIÓN DE VISUALIZACIÓN ---
+                _buildVisualizarMiembrosList(),
+                const SizedBox(height: 20),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _showAgregarEstudianteDialog,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700], // Azul
+                      backgroundColor: Colors.blue[700],
                     ),
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Agregar Estudiante'),
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    label: const Text(
+                      'Agregar Estudiante',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -796,8 +862,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _showEliminarEstudianteDialog,
-                    icon: const Icon(Icons.person_remove),
-                    label: const Text('Eliminar Estudiante'),
+                    icon: const Icon(Icons.person_remove, color: Colors.white),
+                    label: const Text(
+                      'Eliminar Estudiante',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[400],
                     ),
@@ -832,8 +901,14 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange[700],
                     ),
-                    icon: const Icon(Icons.add_box_outlined),
-                    label: const Text('Agregar Material'),
+                    icon: const Icon(
+                      Icons.add_box_outlined,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Agregar Material',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -841,8 +916,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _showEliminarMaterialDialog,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Eliminar Material'),
+                    icon: const Icon(Icons.delete_outline, color: Colors.white),
+                    label: const Text(
+                      'Eliminar Material',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[400],
                     ),
@@ -870,8 +948,17 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.flag_circle_outlined),
-                    label: const Text('Gestionar Hitos'),
+                    icon: const Icon(
+                      Icons.flag_circle_outlined,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Gestionar Hitos',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[700],
+                    ),
                   ),
                 ),
               ],

@@ -19,13 +19,11 @@ class MyApp extends StatelessWidget {
       title: 'METROGESTIÓN',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-
         primarySwatch: Colors.orange,
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: Colors.orange,
         ).copyWith(secondary: Colors.orangeAccent),
         useMaterial3: true,
-
 
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.orange,
@@ -37,7 +35,6 @@ class MyApp extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-
 
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
