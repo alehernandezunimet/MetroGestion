@@ -27,12 +27,14 @@ class _HitosScreenState extends State<HitosScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Crear Nuevo Hito'),
+          title: const Text('Crear Nueva Actividad'),
           content: Form(
             key: formKey,
             child: TextFormField(
               controller: nombreController,
-              decoration: const InputDecoration(labelText: 'Nombre del Hito'),
+              decoration: const InputDecoration(
+                labelText: 'Nombre del Actividad',
+              ),
               validator: (value) =>
                   value == null || value.isEmpty ? 'Ingrese un nombre' : null,
             ),
@@ -62,32 +64,27 @@ class _HitosScreenState extends State<HitosScreen> {
       await _firestore
           .collection('proyectos')
           .doc(widget.projectId)
-          .collection('hitos')
-          .add({
-        'nombre': name,
-        'fechaCreacion': FieldValue.serverTimestamp(),
-      });
+          .collection('Actividad')
+          .add({'nombre': name, 'fechaCreacion': FieldValue.serverTimestamp()});
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hito creado con éxito.')),
+        const SnackBar(content: Text('Actividad creado con éxito.')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al crear el hito: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al crear el hito: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hitos de: ${widget.projectName}'),
-      ),
+      appBar: AppBar(title: Text('Actividad de: ${widget.projectName}')),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('proyectos')
             .doc(widget.projectId)
-            .collection('hitos')
+            .collection('Actividad')
             .orderBy('fechaCreacion', descending: false)
             .snapshots(),
         builder: (context, snapshot) {
@@ -100,7 +97,7 @@ class _HitosScreenState extends State<HitosScreen> {
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(
               child: Text(
-                'No hay hitos creados para este proyecto.',
+                'No hay Actividad creados para este proyecto.',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             );
@@ -114,13 +111,19 @@ class _HitosScreenState extends State<HitosScreen> {
             itemBuilder: (context, index) {
               final hito = hitos[index];
               final hitoData = hito.data() as Map<String, dynamic>;
-              final hitoName = hitoData['nombre'] ?? 'Hito sin nombre';
+              final hitoName = hitoData['nombre'] ?? 'Actividad sin nombre';
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
-                  leading: Icon(Icons.flag, color: Theme.of(context).primaryColor),
-                  title: Text(hitoName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  leading: Icon(
+                    Icons.flag,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  title: Text(
+                    hitoName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     Navigator.push(
@@ -143,7 +146,7 @@ class _HitosScreenState extends State<HitosScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddHitoDialog,
         icon: const Icon(Icons.add),
-        label: const Text('Crear Hito'),
+        label: const Text('Crear Actividad'),
       ),
     );
   }

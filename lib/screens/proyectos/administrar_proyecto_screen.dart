@@ -28,8 +28,8 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
   DateTime? _selectedDate;
   bool _isLoading = false;
 
-  // Variable para controlar el modo edición
-  bool _isEditing = false;
+  // Variable para controlar SOLO la edición de la descripción
+  bool _isEditingDescription = false;
 
   late List<dynamic> _currentMiembros;
   late List<dynamic> _currentMateriales;
@@ -65,7 +65,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     super.dispose();
   }
 
-  // --- Lógica para guardar cambios ---
+  // --- Guardar cambios de Descripción ---
   Future<void> _guardarCambios() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -84,17 +84,16 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Proyecto actualizado con éxito.')),
+        const SnackBar(content: Text('Información actualizada con éxito.')),
       );
 
-      // Al guardar exitosamente, salimos del modo edición
       setState(() {
-        _isEditing = false;
+        _isEditingDescription = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar el proyecto: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al actualizar: $e')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -102,7 +101,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     }
   }
 
-  // --- LÓGICA: Mostrar diálogo para AGREGAR estudiante ---
+  // --- Agregar estudiante ---
   void _showAgregarEstudianteDialog() {
     final TextEditingController emailController = TextEditingController();
     final GlobalKey<FormState> dialogFormKey = GlobalKey<FormState>();
@@ -124,7 +123,11 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.email_outlined),
+                        border: OutlineInputBorder(),
+                      ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
                         if (value == null || !value.contains('@')) {
@@ -155,9 +158,13 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                             setStateDialog(() {
                               isAdding = false;
                             });
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           }
                         },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[700],
+                    foregroundColor: Colors.white,
+                  ),
                   child: isAdding
                       ? const SizedBox(
                           width: 20,
@@ -190,6 +197,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No se encontró un estudiante con ese email.'),
+            backgroundColor: Colors.orange,
           ),
         );
         return;
@@ -202,6 +210,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Este estudiante ya está en el proyecto.'),
+            backgroundColor: Colors.orange,
           ),
         );
         return;
@@ -216,82 +225,86 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Estudiante agregado con éxito.')),
+        const SnackBar(
+          content: Text('Estudiante agregado con éxito.'),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al agregar estudiante: $e')),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
   }
 
-  void _showEliminarEstudianteDialog() {
-    showDialog(
+  // --- Confirmación Eliminar ---
+  Future<void> _showDeleteConfirmationDialog(
+    String studentId,
+    String studentName,
+  ) async {
+    return showDialog<void>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text('Eliminar Estudiante'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: _buildMiembrosListDialog(setStateDialog),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cerrar'),
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar Eliminación'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('¿Eliminar a $studentName del proyecto?'),
+                const SizedBox(height: 10),
+                const Text(
+                  'Esta acción borrará su acceso.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildMiembrosListDialog(StateSetter setStateDialog) {
-    if (_currentMiembros.isEmpty) {
-      return const Text('No hay estudiantes en este proyecto.');
-    }
-
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _getMiembrosDetalles(_currentMiembros),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Text('No se encontraron datos de los estudiantes.');
-        }
-
-        final miembros = snapshot.data!;
-
-        return ListView.builder(
-          shrinkWrap: true,
-          itemCount: miembros.length,
-          itemBuilder: (context, index) {
-            final miembro = miembros[index];
-            return ListTile(
-              title: Text(miembro['nombre']),
-              subtitle: Text(miembro['email']),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () async {
-                  await _removerMiembro(miembro['uid']);
-                  setState(() {
-                    _currentMiembros.remove(miembro['uid']);
-                  });
-                  setStateDialog(() {});
-                },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
               ),
-            );
-          },
+              onPressed: () {
+                Navigator.of(context).pop();
+                _removerMiembro(studentId);
+              },
+            ),
+          ],
         );
       },
     );
   }
 
+  Future<void> _removerMiembro(String studentId) async {
+    try {
+      await _firestore.collection('proyectos').doc(widget.projectId).update({
+        'miembros': FieldValue.arrayRemove([studentId]),
+      });
+
+      setState(() {
+        _currentMiembros.remove(studentId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Estudiante eliminado.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // --- Lista de Miembros (Siempre visible los controles) ---
   Widget _buildVisualizarMiembrosList() {
     if (_currentMiembros.isEmpty) {
       return Container(
@@ -322,7 +335,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Text('Error al cargar datos de estudiantes.');
+          return const Text('Error al cargar datos.');
         }
 
         final miembros = snapshot.data!;
@@ -342,12 +355,32 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 return Container(
                   color: index.isEven ? Colors.white : Colors.grey[50],
                   child: ListTile(
-                    leading: Icon(
-                      Icons.person_outline,
-                      color: Colors.blue[700],
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue[100],
+                      child: Text(
+                        miembro['nombre'][0].toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.blue[800],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    title: Text(miembro['nombre']),
-                    subtitle: Text(miembro['email']),
+                    title: Text(
+                      miembro['nombre'],
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      miembro['email'],
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'Eliminar miembro',
+                      onPressed: () => _showDeleteConfirmationDialog(
+                        miembro['uid'],
+                        miembro['nombre'],
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -398,10 +431,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                   color: Colors.orange[700],
                 ),
                 title: Text(material['nombre'] ?? 'Sin nombre'),
-                trailing: Text(
-                  'Cantidad: ${material['cantidad'] ?? 0}',
-                  style: const TextStyle(color: Colors.black54),
-                ),
+                trailing: Text('Cant: ${material['cantidad'] ?? 0}'),
               ),
             );
           }).toList(),
@@ -439,12 +469,9 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                   decoration: const InputDecoration(labelText: 'Cantidad'),
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingrese una cantidad';
-                    }
-                    if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                      return 'Ingrese un número válido';
-                    }
+                    if (value == null || value.isEmpty) return 'Requerido';
+                    if (int.tryParse(value) == null || int.parse(value) <= 0)
+                      return 'Inválido';
                     return null;
                   },
                 ),
@@ -480,18 +507,14 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
         'materiales': FieldValue.arrayUnion([material]),
       });
-
-      setState(() {
-        _currentMateriales.add(material);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Material agregado con éxito.')),
-      );
+      setState(() => _currentMateriales.add(material));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Material agregado.')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al agregar material: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -517,9 +540,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
   }
 
   Widget _buildMaterialesListDialog() {
-    if (_currentMateriales.isEmpty) {
-      return const Text('No hay materiales para eliminar.');
-    }
+    if (_currentMateriales.isEmpty) return const Text('No hay materiales.');
 
     return ListView.builder(
       shrinkWrap: true,
@@ -543,9 +564,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
   Future<List<Map<String, dynamic>>> _getMiembrosDetalles(
     List<dynamic> miembrosIds,
   ) async {
-    if (miembrosIds.isEmpty) {
-      return [];
-    }
+    if (miembrosIds.isEmpty) return [];
 
     List<Map<String, dynamic>> miembrosData = [];
     final query = await _firestore
@@ -563,38 +582,19 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
     return miembrosData;
   }
 
-  Future<void> _removerMiembro(String studentId) async {
-    try {
-      await _firestore.collection('proyectos').doc(widget.projectId).update({
-        'miembros': FieldValue.arrayRemove([studentId]),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Estudiante eliminado con éxito.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al eliminar estudiante: $e')),
-      );
-    }
-  }
-
   Future<void> _removerMaterial(Map<String, dynamic> material) async {
     try {
       await _firestore.collection('proyectos').doc(widget.projectId).update({
         'materiales': FieldValue.arrayRemove([material]),
       });
-
-      setState(() {
-        _currentMateriales.remove(material);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Material eliminado con éxito.')),
-      );
+      setState(() => _currentMateriales.remove(material));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Material eliminado.')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al eliminar material: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -610,13 +610,12 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- SECCIÓN: DASHBOARD ---
+                // --- DASHBOARD ---
                 const Text(
                   'Dashboard de Progreso',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-
                 StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: _firestore
                       .collection('proyectos')
@@ -625,14 +624,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                       .snapshots(),
                   builder: (context, hitosSnapshot) {
                     if (hitosSnapshot.connectionState ==
-                        ConnectionState.waiting) {
+                        ConnectionState.waiting)
                       return const Center(child: CircularProgressIndicator());
-                    }
-                    if (hitosSnapshot.hasError) {
-                      return const Center(
-                        child: Text('Error al cargar datos del dashboard.'),
-                      );
-                    }
+                    if (hitosSnapshot.hasError)
+                      return const Text('Error en dashboard.');
 
                     final hitoDocs = hitosSnapshot.data?.docs ?? [];
 
@@ -646,31 +641,26 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                             final data = taskDoc.data();
                             return Task(
                               id: taskDoc.id,
-                              name: data['nombre'] ?? 'Tarea sin nombre',
+                              name: data['nombre'] ?? 'Tarea',
                               isCompleted: data['estado'] == 'completada',
                             );
                           }).toList();
                           return Hito(
                             id: hitoDoc.id,
-                            name: hitoDoc.data()['nombre'] ?? 'Hito sin nombre',
+                            name: hitoDoc.data()['nombre'] ?? 'Hito',
                             tasks: tasks,
                           );
                         }).toList(),
                       ),
                       builder: (context, projectSnapshot) {
                         if (projectSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
+                            ConnectionState.waiting)
+                          return const CircularProgressIndicator();
                         final project = Project(
                           id: widget.projectId,
                           name: widget.projectData['nombre'] ?? 'Proyecto',
                           milestones: projectSnapshot.data ?? [],
                         );
-
                         return ProjectProgressDashboard(project: project);
                       },
                     );
@@ -679,8 +669,7 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
 
                 const Divider(height: 40),
 
-                // --- SECCIÓN: DATOS DEL PROYECTO (MODIFICADA) ---
-                // Cabecera con Título y Botón Editar
+                // --- INFORMACIÓN GENERAL (Con Modo Edición) ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -691,14 +680,10 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    // Solo mostramos el lápiz si NO estamos editando
-                    if (!_isEditing)
+                    if (!_isEditingDescription)
                       IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _isEditing = true;
-                          });
-                        },
+                        onPressed: () =>
+                            setState(() => _isEditingDescription = true),
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         tooltip: 'Editar información',
                       ),
@@ -716,69 +701,58 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Campo Descripción
                 TextFormField(
                   controller: _descripcionController,
-                  enabled: _isEditing, // Bloqueado si no se edita
+                  enabled: _isEditingDescription,
                   decoration: InputDecoration(
                     labelText: 'Descripción',
-                    // Borde normal al editar, sin borde al leer
-                    border: _isEditing
+                    border: _isEditingDescription
                         ? const OutlineInputBorder()
                         : InputBorder.none,
-                    // Fondo suave al editar
-                    filled: _isEditing,
-                    fillColor: _isEditing
+                    filled: _isEditingDescription,
+                    fillColor: _isEditingDescription
                         ? Colors.grey[50]
                         : Colors.transparent,
-                    contentPadding: _isEditing
+                    contentPadding: _isEditingDescription
                         ? const EdgeInsets.all(12)
                         : EdgeInsets.zero,
-                    alignLabelWithHint: true,
                   ),
                   style: const TextStyle(color: Colors.black87, fontSize: 15),
                   maxLines: 4,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'La descripción no puede estar vacía';
-                    }
-                    return null;
-                  },
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Requerido' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Campo Fecha
                 TextFormField(
                   controller: _fechaController,
-                  enabled: _isEditing, // Bloqueado si no se edita
+                  enabled: _isEditingDescription,
                   decoration: InputDecoration(
                     labelText: 'Fecha de Entrega',
-                    border: _isEditing
+                    border: _isEditingDescription
                         ? const OutlineInputBorder()
                         : InputBorder.none,
-                    filled: _isEditing,
-                    fillColor: _isEditing
+                    filled: _isEditingDescription,
+                    fillColor: _isEditingDescription
                         ? Colors.grey[50]
                         : Colors.transparent,
-                    contentPadding: _isEditing
+                    contentPadding: _isEditingDescription
                         ? const EdgeInsets.all(12)
                         : EdgeInsets.zero,
-                    suffixIcon: _isEditing
+                    suffixIcon: _isEditingDescription
                         ? const Icon(Icons.calendar_today)
                         : null,
                   ),
-                  readOnly: true, // El teclado no sale, solo el picker
+                  readOnly: true,
                   onTap: () async {
-                    if (!_isEditing)
-                      return; // Solo funciona si estamos editando
-
+                    if (!_isEditingDescription) return;
                     final DateTime? picked = await showDatePicker(
                       context: context,
                       initialDate: _selectedDate ?? DateTime.now(),
                       firstDate: DateTime.now(),
                       lastDate: DateTime(2101),
                     );
-                    if (picked != null && picked != _selectedDate) {
+                    if (picked != null) {
                       setState(() {
                         _selectedDate = picked;
                         _fechaController.text = DateFormat(
@@ -790,176 +764,122 @@ class _AdministrarProyectoScreenState extends State<AdministrarProyectoScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Botón Guardar Cambios (Pequeño y condicional)
-                if (_isEditing)
+                if (_isEditingDescription)
                   Align(
                     alignment: Alignment.centerRight,
                     child: ElevatedButton.icon(
                       onPressed: _isLoading ? null : _guardarCambios,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.green[600], // Verde para guardar
+                        backgroundColor: Colors.green[600],
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
                       ),
-                      icon: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.save, size: 18),
+                      icon: const Icon(Icons.save, size: 18),
                       label: const Text('Guardar'),
                     ),
                   ),
 
                 const Divider(height: 40),
 
-                // --- SECCIÓN: GESTIONAR EQUIPO ---
-                const Text(
-                  'Gestionar Equipo',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // --- GESTIONAR EQUIPO (Siempre Visible) ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Gestionar Equipo',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton.filled(
+                      onPressed: _showAgregarEstudianteDialog,
+                      icon: const Icon(Icons.person_add_alt_1, size: 18),
+                      tooltip: 'Agregar Estudiante',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-
-                Text(
-                  'Miembros Actuales (${_currentMiembros.length})',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 _buildVisualizarMiembrosList(),
-                const SizedBox(height: 20),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _showAgregarEstudianteDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                    ),
-                    icon: const Icon(Icons.person_add, color: Colors.white),
-                    label: const Text(
-                      'Agregar Estudiante',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _showEliminarEstudianteDialog,
-                    icon: const Icon(Icons.person_remove, color: Colors.white),
-                    label: const Text(
-                      'Eliminar Estudiante',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[400],
-                    ),
-                  ),
-                ),
 
                 const Divider(height: 40),
 
-                // --- SECCIÓN: GESTIONAR MATERIALES ---
+                // --- GESTIONAR MATERIALES ---
                 const Text(
                   'Gestionar Materiales',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-
-                Text(
-                  'Materiales Asignados (${_currentMateriales.length})',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 _buildVisualizarMaterialesList(),
                 const SizedBox(height: 20),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _showAgregarMaterialDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange[700],
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showAgregarMaterialDialog,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.add_box_outlined),
+                        label: const Text('Agregar'),
+                      ),
                     ),
-                    icon: const Icon(
-                      Icons.add_box_outlined,
-                      color: Colors.white,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showEliminarMaterialDialog,
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[400],
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ),
-                    label: const Text(
-                      'Agregar Material',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _showEliminarMaterialDialog,
-                    icon: const Icon(Icons.delete_outline, color: Colors.white),
-                    label: const Text(
-                      'Eliminar Material',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[400],
-                    ),
-                  ),
+                  ],
                 ),
                 const Divider(height: 40),
 
-                // --- SECCIÓN: TAREAS ---
-                const Text(
-                  'Gestionar Hitos y Tareas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HitosScreen(
-                            projectId: widget.projectId,
-                            projectName: widget.projectData['nombre'],
+                // --- SECCIÓN: ACTIVIDADES (MODIFICADO) ---
+                // Ahora es una fila limpia con título y botón pequeño
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Actividades',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HitosScreen(
+                              projectId: widget.projectId,
+                              projectName: widget.projectData['nombre'],
+                            ),
                           ),
+                        );
+                      },
+                      icon: const Icon(Icons.assignment_outlined, size: 18),
+                      label: const Text('Gestionar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.flag_circle_outlined,
-                      color: Colors.white,
+                      ),
                     ),
-                    label: const Text(
-                      'Gestionar Hitos',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700],
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
