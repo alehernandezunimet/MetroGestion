@@ -15,8 +15,8 @@ class StudentProjectDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String projectName = projectData['nombre'] ?? 'Detalles del Proyecto';
-    final String projectDescription = projectData['descripcion'] ?? 'Sin descripción.';
+    final String projectName = (projectData['nombre'] as String?) ?? 'Detalles del Proyecto';
+    final String projectDescription = (projectData['descripcion'] as String?) ?? 'Sin descripción.';
     final Timestamp? deadline = projectData['fechaEntrega'];
 
     return Scaffold(
@@ -62,14 +62,15 @@ class StudentProjectDetailScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            _buildHitosList(context),
+            
+            _buildHitosList(context, projectId),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHitosList(BuildContext context) {
+  Widget _buildHitosList(BuildContext context, String projectId) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('proyectos')
@@ -133,7 +134,7 @@ class StudentProjectDetailScreen extends StatelessWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => TaskSubmissionScreen(
-                                    projectId: projectId,
+                                    projectId: projectId, // Usamos la variable local segura
                                     hitoId: hitoDoc.id,
                                     taskId: taskDoc.id,
                                   ),
